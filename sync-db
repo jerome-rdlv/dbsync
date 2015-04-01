@@ -5,9 +5,13 @@ DbSync::run();
 
 class DbSync
 {
-	public static $mysqlPath = 'mysql';
-	public static $mysqlDumpPath = 'mysqldump';
 	public static $confDefaultFile = 'sync-db.json';
+
+	/** @deprecated */
+	private static $mysqlPath = 'mysql';
+
+	/** @deprecated */
+	private static $mysqlDumpPath = 'mysqldump';
 
 	public static function run()
 	{
@@ -15,8 +19,6 @@ class DbSync
 	}
 
 	private $config = null;
-
-	private $args = null;
 
 	private $srdb = '/tmp/srdb.cli.php';
 
@@ -51,12 +53,25 @@ class DbSync
 		'ocean'  => '36'
 	);
 
+	private $cmds = array(
+		'test' => 'echo "use {base};" | mysql -u "{user}" -p"{pass}" -h "{host}" "{base}"',
+		'source' => 'mysqldump -u "{user}" -p"{pass}" --add-drop-table --no-create-db -h "{host}" "{base}"',
+		'target' => 'mysql -u "{user}" -p"{pass}" -h "{host}" "{base}"'
+	);
+
 	private $envs = null;
 
 	private function __construct()
 	{
 		global $argv;
-		$this->args = $argv;
+
+		// generate ssh cmds
+		$cmds = array();
+		foreach ($this->cmds as $key => &$cmd) {
+			$cmds[$key] = $cmd;
+			$cmds['ssh_'. $key] = 'ssh {ssh} \''. $cmd .'\'';
+		}
+		$this->cmds = $cmds;
 
 		$this->script = basename($argv[0]);
 		$this->options = getopt(
@@ -416,25 +431,25 @@ class DbSync
 			}
 			elseif ($target) {
 
-				$tCmd = '{mysql} -u "{user}" -p"{pass}" -h "{host}" "{base}"';
-				$tCmd = $this->nvsprintf($tCmd, array(
+				$targetCmd = '{mysql} -u "{user}" -p"{pass}" -h "{host}" "{base}"';
+				$targetCmd = $this->nvsprintf($targetCmd, array(
 					'mysql' => self::$mysqlPath,
 					'user' => $target['user'],
 					'pass' => $target['pass'],
 					'base' => $target['base']
 				));
 				if (array_key_exists('ssh', $target)) {
-					$tCmd = $this->nvsprintf('ssh {ssh} \''. $tCmd .'\'', array(
+					$targetCmd = $this->nvsprintf('ssh {ssh} \''. $targetCmd .'\'', array(
 						'host' => 'localhost',
 						'ssh' => $target['ssh']
 					));
 				}
 				else {
-					$tCmd = $this->nvsprintf($tCmd, array(
+					$targetCmd = $this->nvsprintf($targetCmd, array(
 						'host' => $target['host']
 					));
 				}
-				$this->exec($sourceCmd .' | '. $tCmd);
+				$this->exec($sourceCmd .' | '. $targetCmd);
 			}
 			$this->done('database transfer succeeded      ');
 		}
