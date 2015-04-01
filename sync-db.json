@@ -3,24 +3,24 @@
         "dev": {
             "user": "dev",
             "pass": "dev",
-            "base": "ogienko_morizet",
-            "host": "localhost"
+            "base": "sync-db-test_dev",
+			"host": "localhost"
         },
-        "preprod": {
-            "user": "yorunokoe",
-            "pass": "Xk2Z6EVXUjhe5bc2KWQPXP",
-            "base": "ogienko_morizet",
-            "ssh": "admin@92.243.3.187"
+        "prod": {
+            "user": "dev",
+            "pass": "dev",
+            "base": "sync-db-test_prod",
+            "ssh": "jerome@example.org"
         }
     },
     "replacements": [
         {
-            "dev": "morizet.dev.rdlv",
-            "preprod": "preprod-2c3k58.rue-de-la-vieille.fr"
+            "dev": "dev.example.org",
+            "prod": "prod.example.org"
         },
         {
-            "dev": "jerome@example.org",
-            "preprod": "jerome@rue-de-la-vieille.fr"
+            "dev": "jerome@dev.example.org",
+            "prod": "jerome@prod.example.org"
         }
     ]
 }

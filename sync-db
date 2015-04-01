@@ -220,6 +220,7 @@ class DbSync
 	{
 		// TODO output file should be defined as target
 		// TODO add support for file as source
+		// TODO if no host, assume localhost
 
 		$confFile = $this->getOpt('conf');
 		if (!$confFile) {
