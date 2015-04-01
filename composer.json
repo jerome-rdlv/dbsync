@@ -1,4 +1,16 @@
 {
+	"name": "rdlv/sync-db",
+	"description": "Command line tool to sync between local and remote databases with replacements.",
+	"type": "project",
+	"license": "CC-BY-4.0",
+	"authors": [
+		{
+			"name": "Jérôme Mulsant",
+			"email": "jerome@rue-de-la-vieille.fr",
+			"homepage": "http://rue-de-la-vieille.fr",
+			"role": "developer"
+		}
+	],
 	"require": {
 		"interconnectit/search-replace-db": "~3.0"
 	},
