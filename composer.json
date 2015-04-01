@@ -5,6 +5,9 @@
 	"scripts": {
 		"post-install-cmd": [
 			"./update-srdb"
+		],
+		"post-update-cmd": [
+			"./update-srdb"
 		]
 	}
 }
