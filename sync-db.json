@@ -3,8 +3,7 @@
         "dev": {
             "user": "dev",
             "pass": "dev",
-            "base": "sync-db-test_dev",
-			"host": "localhost"
+            "base": "sync-db-test_dev"
         },
         "prod": {
             "user": "dev",
