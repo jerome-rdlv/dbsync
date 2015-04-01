@@ -20,8 +20,8 @@ $out = $cli ."\n\n". $class;
 $script_file = dirname(__FILE__).'/sync-db';
 $script = file_get_contents($script_file);
 
-$search = '';
-$replace = '';
+$search = '/^(\s*\/\/SRDB-DATA #).*(\n\s*)return .*$/m';
+$replace = '\1 Updated on '. date('Y-m-d H:i:s') .'\2return \''. base64_encode($out). '\';';
 $script = preg_replace($search, $replace, $script);
 
-echo $script;
+file_put_contents($script_file, $script);

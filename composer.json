@@ -1,5 +1,10 @@
 {
 	"require": {
 		"interconnectit/search-replace-db": "~3.0"
+	},
+	"scripts": {
+		"post-install-cmd": [
+			"./update-srdb"
+		]
 	}
 }
