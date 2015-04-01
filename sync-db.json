@@ -1,0 +1,26 @@
+{
+    "environments": {
+        "dev": {
+            "user": "dev",
+            "pass": "dev",
+            "base": "ogienko_morizet",
+            "host": "localhost"
+        },
+        "preprod": {
+            "user": "yorunokoe",
+            "pass": "Xk2Z6EVXUjhe5bc2KWQPXP",
+            "base": "ogienko_morizet",
+            "ssh": "admin@92.243.3.187"
+        }
+    },
+    "replacements": [
+        {
+            "dev": "morizet.dev.rdlv",
+            "preprod": "preprod-2c3k58.rue-de-la-vieille.fr"
+        },
+        {
+            "dev": "jerome@example.org",
+            "preprod": "jerome@rue-de-la-vieille.fr"
+        }
+    ]
+}

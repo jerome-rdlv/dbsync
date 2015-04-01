@@ -1,0 +1,27 @@
+#!/usr/bin/php
+<?php
+
+$lib_path = dirname(__FILE__).'/vendor/interconnectit/search-replace-db/';
+$class_file = 'srdb.class.php';
+$cli_file = 'srdb.cli.php';
+
+$cli = file_get_contents($lib_path . $cli_file);
+$class = file_get_contents($lib_path . $class_file);
+
+// drop require in cli
+$regex = '/^require_once.*'. str_replace('.', '\.', $class_file) .'.*$/m';
+$cli = preg_replace($regex, '// -- inserted at the end of this file --', $cli);
+
+// drop php open tag
+$class = preg_replace('/^\<\?php.*$/m', '', $class);
+$out = $cli ."\n\n". $class;
+
+// update script
+$script_file = dirname(__FILE__).'/sync-db';
+$script = file_get_contents($script_file);
+
+$search = '';
+$replace = '';
+$script = preg_replace($search, $replace, $script);
+
+echo $script;
