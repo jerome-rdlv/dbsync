@@ -14,12 +14,14 @@
     },
     "replacements": [
         {
-            "dev": "dev.example.org",
-            "prod": "prod.example.org"
+			"include-cols": "option_value",
+			"dev": "jerome-dev@example.org",
+            "prod": "jerome-prod@example.org"
         },
         {
-            "dev": "jerome@dev.example.org",
-            "prod": "jerome@prod.example.org"
+			"tables": "wp_options",
+            "dev": "dev.example.org",
+            "prod": "prod.example.org"
         }
     ]
 }

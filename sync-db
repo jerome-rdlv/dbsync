@@ -16,6 +16,9 @@ class DbSync
 
 	private $srdb = '/tmp/srdb_%s.php';
 
+	// used to mark source env in dump file
+	private $marker = '-- sync-db env: ';
+
 	private $opts = array(
 		'c:' => 'conf:',
 		's:' => 'source:',
@@ -48,13 +51,15 @@ class DbSync
 	);
 
 	private $cmds = array(
-		'test'    => 'echo "use {base};" | mysql -u "{user}" -p"{pass}" -h "{host}" "{base}"',
-		'source'  => 'mysqldump -u "{user}" -p"{pass}" --add-drop-table --no-create-db -h "{host}" "{base}"',
-		'target'  => 'mysql -u "{user}" -p"{pass}" -h "{host}" "{base}"',
-		'cp'      => 'echo "{data}" | php -r "echo base64_decode(stream_get_contents(STDIN));" > {srdb}',
-		'chmod'   => 'chmod +x {srdb}',
-		'rm'      => 'rm {srdb}',
-		'replace' => '{srdb} -n "{base}" -u "{user}" -p"{pass}" -h "{host}" -s"{search}" -r"{replace}" {options}'
+		'test'     => 'echo "use {base};" | mysql -u "{user}" -p"{pass}" -h "{host}" "{base}"',
+		'source'   => 'mysqldump -u "{user}" -p"{pass}" --add-drop-table --no-create-db -h "{host}" "{base}"',
+		'target'   => 'mysql -u "{user}" -p"{pass}" -h "{host}" "{base}"',
+		'markfile' => '{ echo "{marker}{env}"; cat; } > "{file}"',
+		'tofile'   => ' cat > "{file}"',
+		'cp'       => 'echo "{data}" | php -r "echo base64_decode(stream_get_contents(STDIN));" > {srdb}',
+		'chmod'    => 'chmod +x {srdb}',
+		'rm'       => 'rm {srdb}',
+		'replace'  => '{srdb} -n "{base}" -u "{user}" -p"{pass}" -h "{host}" -s"{search}" -r"{replace}" {options}'
 	);
 
 	private $envs = null;
@@ -91,6 +96,18 @@ class DbSync
 
 		$this->loadConfig();
 		$this->checkConnections();
+
+		// try to extract origin env from the file
+		if ($this->envs['source']['file']) {
+			if ($file = fopen($this->envs['source']['file'], 'r')) {
+				if ($line = fgets($file)) {
+					if (preg_match('/' . $this->marker . '(.+)$/', $line, $matches)) {
+						$this->envs['source']['env'] = $matches[1];
+					}
+				}
+				fclose($file);
+			}
+		}
 
 		// everything ok, display confirm message
 		if ($this->confirm()) {
@@ -199,6 +216,10 @@ class DbSync
 
 	private function checkConnections()
 	{
+		if ($this->envs['source']['file'] && $this->envs['target']['file']
+			&& $this->envs['source']['file'] == $this->envs['target']['file']) {
+			$this->error('Source and target file can not be same file');
+		}
 		foreach ($this->envs as $env => $config) {
 			if ($config['file']) {
 				// check file
@@ -236,23 +257,20 @@ class DbSync
 		return $list;
 	}
 
-	private function checkSourceFile($config)
+	private function checkSourceFile($source)
 	{
-		if (!file_exists($config['file'])) {
+		if (!file_exists($source['file']) || !is_readable($source['file'])) {
 			// maybe it was not a file
 			$this->error(
 				"Source error, environment not found or file does not exists",
 				$this->getEnvList()
 			);
 		}
-
-		// try to extract origin env from the file
-		// TODO
 	}
 
-	private function checkTargetFile($config)
+	private function checkTargetFile($target)
 	{
-		$file = $config['file'];
+		$file = $target['file'];
 		$dir = dirname($file);
 		if (file_exists($file)) {
 			if (!is_writable($file)) {
@@ -272,10 +290,6 @@ class DbSync
 
 	private function loadConfig()
 	{
-		// TODO output file should be defined as target
-		// TODO add support for file as source
-		// TODO if no host, assume localhost
-
 		$confFile = $this->getOpt('conf');
 		if (!$confFile) {
 			$confFile = self::$confDefaultFile;
@@ -306,7 +320,7 @@ class DbSync
 		foreach (array('source', 'target') as $env) {
 			$val = $this->getOpt($env);
 			$this->envs[$env] = array(
-				'env' => '',
+				'env' => false,
 				'user' => false,
 				'pass' => false,
 				'base' => false,
@@ -399,9 +413,9 @@ class DbSync
 	 * @param $format
 	 * @param $vars
 	 */
-	private function nvsprintf($format, $vars = array())
+	private function nvsprintf($format, $vars = array(), $regex ='/{([^{}]*?)}/')
 	{
-		return preg_replace_callback('/{(.*?)}/', function ($matches) use ($vars) {
+		return preg_replace_callback($regex, function ($matches) use ($vars) {
 			if (array_key_exists($matches[1], $vars)) {
 				return $vars[$matches[1]];
 			}
@@ -421,34 +435,50 @@ class DbSync
 		if (!$this->getOpt('r')) {
 			$this->doing('database transfer...');
 
-			$sourceCmd = $this->getCmd('source', $source['ssh'], array(
-				'user' => $source['user'],
-				'pass' => $source['pass'],
-				'base' => $source['base'],
-				'host' => $source['host']
-			));
-
-			if ($this->getOpt('output')) {
-				$output = $this->exec($sourceCmd . ' > "' . $this->getOpt('output') . '"', $result);
-				if ($result != 0) {
-					$this->fail($output);
-				}
+			// source
+			if ($source['file']) {
+				// file source
+				$sourceCmd = 'cat "'. $source['file'] .'"';
 			}
 			else {
+				// mysql source
+				$sourceCmd = $this->getCmd('source', $source['ssh'], array(
+					'user' => $source['user'],
+					'pass' => $source['pass'],
+					'base' => $source['base'],
+					'host' => $source['host']
+				));
+			}
 
+			// target
+			if ($target['file']) {
+				// file target
+				$cmd = $source['env'] ? 'markfile' : 'tofile';
+				$targetCmd = $this->nvsprintf($this->cmds[$cmd], array(
+					'marker' => $this->marker,
+					'env' => $source['env'],
+					'file' => $target['file']
+				));
+			}
+			else {
+				// mysql target
 				$targetCmd = $this->getCmd('target', $target['ssh'], array(
 					'user' => $target['user'],
 					'pass' => $target['pass'],
 					'base' => $target['base'],
 					'host' => $target['host']
 				));
-				$this->exec($sourceCmd . ' | ' . $targetCmd);
+			}
+			$result = $this->exec($sourceCmd .' | '. $targetCmd, $output);
+			if ($result !== 0) {
+				$this->fail();
 			}
 			$this->done('database transfer succeeded      ');
 		}
 
 		// option “n” means “no replacements”
-		if (!$this->getOpt('n') && $target && array_key_exists('replacements', $this->config)) {
+		if (!$this->getOpt('n') && array_key_exists('replacements', $this->config)
+			&& $source['env'] && $target['env'] && $source['env'] != $target['env']) {
 			$this->doing('replacements in database...');
 
 			// copy srdb to tmp
@@ -480,8 +510,14 @@ class DbSync
 				}
 				// options
 				$options = '';
-				if (array_key_exists('tables', $replacement)) {
-					$options = '-t "' . $replacement['tables'] . '"';
+				foreach ($this->srdbOpts as $short => $long) {
+					$optName = str_replace(':', '', $long);
+					if (array_key_exists($optName, $replacement)) {
+						$options .= ' --'. $optName;
+						if ($optName != $long) {
+							$options .= ' "'. $replacement[$optName] . '"';
+						}
+					}
 				}
 				$this->exec($this->nvsprintf($replaceCmd, array(
 					'search'  => $replacement[$source['env']],
