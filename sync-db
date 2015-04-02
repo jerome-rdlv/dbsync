@@ -59,17 +59,11 @@ class DbSync
 
 	private $envs = null;
 
+	private $path = null;
+
 	private function __construct()
 	{
 		global $argv;
-
-		// generate ssh cmds
-		$cmds = array();
-		foreach ($this->cmds as $key => &$cmd) {
-			$cmds[$key]          = $cmd;
-			$cmds['ssh_' . $key] = 'ssh {ssh} \'' . $cmd . '\'';
-		}
-		$this->cmds = $cmds;
 
 		$this->script  = basename($argv[0]);
 		$this->options = getopt(
@@ -77,7 +71,19 @@ class DbSync
 			array_values($this->opts)
 		);
 
+		// srdb
 		$this->srdb = sprintf($this->srdb, uniqid());
+
+		// generate ssh cmds
+		$cmds = array();
+		foreach ($this->cmds as $key => &$cmd) {
+			$cmds[$key]          = $cmd;
+			$cmds['ssh_' . $key] = 'ssh {ssh} \'' . str_replace('\'', '\'"\'"\'', $cmd) . '\'';
+		}
+		$this->cmds = $cmds;
+
+		// path
+		$this->exec('pwd', $this->path);
 
 		if ($this->getOpt('help')) {
 			$this->help();
@@ -103,25 +109,15 @@ class DbSync
 
 		$cData   = 'grey';
 		$cSymbol = 'yellow';
-
-		// TODO change following lines. Not readable enough
-		// TODO Add replacement informations
-		// TODO Support file as source
-
-		$items = array('from' => 'source');
-		if ($this->getOpt('output')) {
-			$items['to'] = 'file';
-		}
-		else {
-			$items['to'] = 'target';
-		}
+		
+		$items = array('from' => 'source', 'to' => 'target');
 		$out = array();
 
 		// label
 		$length = 0;
 		foreach ($items as $key => $env) {
 			$out[$env] = $key . ' ';
-			if ($env == 'file') {
+			if ($this->envs[$env]['file']) {
 				$out[$env] .= $this->c('file', 'no');
 			}
 			else {
@@ -136,8 +132,8 @@ class DbSync
 
 			echo str_pad($out[$env], $length + 2, ' ', STR_PAD_LEFT) . "  ";
 
-			if ($env == 'file') {
-				echo $this->c($this->getOpt('output'), $cData);
+			if ($this->envs[$env]['file']) {
+				echo $this->c($this->envs[$env]['file'], $cData);
 			}
 			else {
 				$config = $this->envs[$env];
@@ -155,10 +151,6 @@ class DbSync
 				}
 			}
 			echo "\n";
-		}
-
-		if ($this->getOpt('n')) {
-			// TODO show confirmation for replacements or no replacements.
 		}
 
 		$answer = readline("\nDo you confirm? (yo/N) ");
@@ -208,15 +200,73 @@ class DbSync
 	private function checkConnections()
 	{
 		foreach ($this->envs as $env => $config) {
-			$result = $this->exec($this->getCmd('test', $config['ssh'], array(
-				'base' => $config['base'],
-				'user' => $config['user'],
-				'pass' => $config['pass'],
-				'host' => $config['host']
-			)));
-			if ($result !== 0) {
-				$this->error('Connection error for ' . $config['env'] . ' environment.', $result);
+			if ($config['file']) {
+				// check file
+				if ($env == 'source') {
+					$this->checkSourceFile($config);
+				}
+				else {
+					$this->checkTargetFile($config);
+				}
 			}
+			else {
+				// check connection
+				$result = $this->exec($this->getCmd('test', $config['ssh'], array(
+					'base' => $config['base'],
+					'user' => $config['user'],
+					'pass' => $config['pass'],
+					'host' => $config['host']
+				)));
+				if ($result !== 0) {
+					$this->error('Connection error for ' . $config['env'] . ' environment.', $result);
+				}
+			}
+		}
+	}
+
+	private function getEnvList()
+	{
+		// generate environments list
+		$list  = "Available environments: ";
+		$envNames = array_keys($this->config['environments']);
+		array_walk($envNames, function (&$item) {
+			$item = $this->c($item, 'yellow');
+		});
+		$list .= implode(', ', $envNames) . "\n";
+		return $list;
+	}
+
+	private function checkSourceFile($config)
+	{
+		if (!file_exists($config['file'])) {
+			// maybe it was not a file
+			$this->error(
+				"Source error, environment not found or file does not exists",
+				$this->getEnvList()
+			);
+		}
+
+		// try to extract origin env from the file
+		// TODO
+	}
+
+	private function checkTargetFile($config)
+	{
+		$file = $config['file'];
+		$dir = dirname($file);
+		if (file_exists($file)) {
+			if (!is_writable($file)) {
+				$this->error("Target file is not writable");
+			}
+			else {
+				$this->warning('Warning: output file exists, it will be overwritten');
+			}
+		}
+		elseif (!file_exists($dir) || !is_dir($dir)) {
+			$this->error("Target file directory does not exist");
+		}
+		elseif (!is_writable($dir)) {
+			$this->error("Target file directory is not writable");
 		}
 	}
 
@@ -242,64 +292,38 @@ class DbSync
 			$this->error('No environment found in config.');
 		}
 
-		$msgEnvs  = "Available environments: ";
-		$envNames = array_keys($this->config['environments']);
-		array_walk($envNames, function (&$item) {
-			$item = $this->c($item, 'yellow');
-		});
-		$msgEnvs .= implode(', ', $envNames) . "\n";
+		$envList = $this->getEnvList();
 
+		// must have source and target
 		if (!$this->getOpt('source')) {
-			$this->error('Missing source environment', $msgEnvs, true);
+			$this->error('Missing source environment', $envList, true);
 		}
-		if (!$this->getOpt('target') && !$this->getOpt('output')) {
-			$this->error('Missing target environment or output file', $msgEnvs, true);
-		}
-		if ($this->getOpt('output')) {
-			if ($this->getOpt('target')) {
-				$this->error('Can not have a target environment and an output file');
-			}
-
-			$output = $this->getOpt('output');
-			if (file_exists($output)) {
-				if (is_writable($output)) {
-					$this->warning('Output file exists');
-				}
-				else {
-					$this->error('Output file is not writable');
-				}
-			}
-			elseif (!is_writable(dirname($output))) {
-				$this->error('Output file directory is not writable');
-			}
+		if (!$this->getOpt('target')) {
+			$this->error('Missing target environment or output file', $envList, true);
 		}
 
 		$this->envs = array();
-		$envs       = array('source');
-		if ($this->getOpt('target')) {
-			$envs[] = 'target';
-		}
-
-		foreach ($envs as $env) {
-			$name = $this->getOpt($env);
-			if (!$name) {
-				$this->error("Please give the $env option", $msgEnvs);
+		foreach (array('source', 'target') as $env) {
+			$val = $this->getOpt($env);
+			$this->envs[$env] = array(
+				'env' => '',
+				'user' => false,
+				'pass' => false,
+				'base' => false,
+				'host' => 'localhost',
+				'ssh' => false,
+				'file' => false
+			);
+			if (!$val) {
+				$this->error("Please give the $env option", $envList);
 			}
-			elseif (!array_key_exists($name, $this->config['environments'])) {
-				$this->error("Can not found $name in environments.", $msgEnvs);
+			elseif (!array_key_exists($val, $this->config['environments'])) {
+				// no env, consider it is a file path
+				$this->envs[$env]['file'] = $val;
 			}
 			else {
-				$this->envs[$env]        = $this->config['environments'][$name];
-				$this->envs[$env]['env'] = $name;
-
-				// guarantees host
-				if (!array_key_exists('host', $this->envs[$env])) {
-					$this->envs[$env]['host'] = 'localhost';
-				}
-				// guarantees ssh
-				if (!array_key_exists('ssh', $this->envs[$env])) {
-					$this->envs[$env]['ssh'] = false;
-				}
+				$this->envs[$env] = array_merge($this->envs[$env], $this->config['environments'][$val]);
+				$this->envs[$env]['env'] = $val;
 			}
 		}
 	}
@@ -327,15 +351,13 @@ class DbSync
 
 	private function help()
 	{
-		echo "Usage : " . $this->script . " [-c config_file] -s source (-t target | -o output)\n";
+		echo "Usage : " . $this->script . " [-c config_file] -s source -t target\n";
 		echo "    -c, --conf\n";
 		echo "      Configuration file to read. Defaults to " . self::$confDefaultFile . ".\n";
 		echo "    -s, --source\n";
-		echo "      Source environment name.\n";
+		echo "      Source environment name or file path\n";
 		echo "    -t, --target\n";
-		echo "      Target environment name.\n";
-		echo "    -o, --output\n";
-		echo "      Use output file instead of target.\n";
+		echo "      Target environment name or file path.\n";
 		echo "    -r, --replacements-only\n";
 		echo "      No database transfert, replacements only.\n";
 		echo "    -n, --no-replacements\n";
@@ -528,7 +550,8 @@ class DbSync
 	private function getSrdbData()
 	{
 		/* This is a base64_encode of the merge of `srdb.class.php` and `srdb.cli.php`
-		 * from https://github.com/interconnectit/Search-Replace-DB */
+		 * from https://github.com/interconnectit/Search-Replace-DB
+		 */
 		// SRDB-DATA // Updated on 2015-04-01 23:18:52
 		return <<<EOF
 IyEvdXNyL2Jpbi9waHAgLXEKPD9waHAKCi8qKgogKiBUbyBydW4gdGhpcyBzY3JpcHQsIGV4ZWN1
