@@ -7,12 +7,6 @@ class DbSync
 {
 	public static $confDefaultFile = 'sync-db.json';
 
-	/** @deprecated */
-	private static $mysqlPath = 'mysql';
-
-	/** @deprecated */
-	private static $mysqlDumpPath = 'mysqldump';
-
 	public static function run()
 	{
 		return new self();
@@ -158,7 +152,6 @@ class DbSync
 
 				if ($config['ssh']) {
 					echo $this->c(' ssh:', $cSymbol) . $this->c($config['ssh'], $cData);
-//					echo $this->c(']', $cSymbol);
 				}
 			}
 			echo "\n";
