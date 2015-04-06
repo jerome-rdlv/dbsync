@@ -1,6 +1,6 @@
 {
-	"name": "rdlv/sync-db",
-	"description": "Command line tool to sync between local and remote databases with replacements.",
+	"name": "rdlv/dbsync",
+	"description": "A database synchronization tool with support for replacements and SSH tunneling.",
 	"type": "project",
 	"license": "CC-BY-4.0",
 	"authors": [

@@ -5,7 +5,7 @@ DbSync::run();
 
 class DbSync
 {
-	public static $confDefaultFile = 'sync-db.json';
+	public static $confDefaultFile = 'dbsync.json';
 
 	public static function run()
 	{
