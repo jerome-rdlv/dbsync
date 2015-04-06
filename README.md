@@ -1,6 +1,8 @@
 # dbsync
 
-A database synchronization command line tool with support for replacements and SSH tunneling. Its written in PHP but execute bash commands.
+A database synchronization command line tool with support for replacements and SSH tunneling. Its written in PHP but it executes bash commands.
+
+I’m publishing this here because it might be useful to others, but you use it at your own risks.
 
 *dbsync* uses a configuration file to  define environments (like dev, prod, preprod, etc.) and replacements (different values for different environments). Have a look at the `dbsync.json` example config.
 
