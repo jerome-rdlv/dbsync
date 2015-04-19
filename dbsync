@@ -23,7 +23,6 @@ class DbSync
 		'c:' => 'conf:',
 		's:' => 'source:',
 		't:' => 'target:',
-		'o:' => 'output:',
 		'r'  => 'replacements-only',
 		'n'  => 'no-replacement',
 		'h'  => 'help',
@@ -57,9 +56,10 @@ class DbSync
 		'markfile' => '{ echo "{marker}{env}"; cat; } > "{file}"',
 		'tofile'   => ' cat > "{file}"',
 		'cp'       => 'echo "{data}" | php -r "echo base64_decode(stream_get_contents(STDIN));" > {srdb}',
+		'ssh_cp'   => 'echo "{data}" | php -r "echo base64_decode(stream_get_contents(STDIN));" | ssh {ssh} \'cat > "{srdb}"\'',
 		'chmod'    => 'chmod +x {srdb}',
 		'rm'       => 'rm {srdb}',
-		'replace'  => '{srdb} -n "{base}" -u "{user}" -p"{pass}" -h "{host}" -s"{search}" -r"{replace}" {options}'
+		'replace'  => 'php -f {srdb} -- -n "{base}" -u "{user}" -p"{pass}" -h "{host}" -s"{search}" -r"{replace}" {options}'
 	);
 
 	private $envs = null;
@@ -82,9 +82,15 @@ class DbSync
 		// generate ssh cmds
 		$cmds = array();
 		foreach ($this->cmds as $key => &$cmd) {
-			$cmds[$key]          = $cmd;
-			$cmds['ssh_' . $key] = 'ssh {ssh} \'' . str_replace('\'', '\'"\'"\'', $cmd) . '\'';
+            if (strpos($key, 'ssh_') === false && !array_key_exists('ssh_'. $key, $this->cmds)) {
+                $cmds[$key]          = $cmd;
+                $cmds['ssh_' . $key] = 'ssh {ssh} \'' . str_replace('\'', '\'"\'"\'', $cmd) . '\'';
+            }
+            else {
+                $cmds[$key] = $cmd;
+            }
 		}
+
 		$this->cmds = $cmds;
 
 		// path
@@ -155,12 +161,8 @@ class DbSync
 			else {
 				$config = $this->envs[$env];
 				echo $this->c($config['user'], $cData) . $this->c('@', $cSymbol);
-				if ($config['ssh']) {
-					echo $this->c('localhost', $cData);
-				}
-				else {
-					echo $this->c($config['host'], $cData);
-				}
+
+				echo $this->c($config['host'], $cData);
 				echo $this->c('/', $cSymbol) . $this->c($config['base'], $cData);
 
 				if ($config['ssh']) {
@@ -552,7 +554,7 @@ class DbSync
 	{
 		if ($this->getOpt('debug')) {
 
-			$lmax = 256;
+			$lmax = 512;
 			if (strlen($cmd) > $lmax) {
 				echo "\n" . substr($cmd, 0, $lmax / 2) . ' ... ';
 				echo substr($cmd, strlen($cmd) - $lmax / 2) . "\n";
@@ -588,7 +590,7 @@ class DbSync
 		/* This is a base64_encode of the merge of `srdb.class.php` and `srdb.cli.php`
 		 * from https://github.com/interconnectit/Search-Replace-DB
 		 */
-		// SRDB-DATA // Updated on 2015-04-03 00:25:29
+		// SRDB-DATA // Updated on 2015-04-19 16:58:40
 		return <<<EOF
 IyEvdXNyL2Jpbi9waHAgLXEKPD9waHAKCi8qKgogKiBUbyBydW4gdGhpcyBzY3JpcHQsIGV4ZWN1
 dGUgc29tZXRoaW5nIGxpa2UgdGhpczoKICogYC4vc3JkYi5jbGkucGhwIC1oIGxvY2FsaG9zdCAt

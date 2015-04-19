@@ -17,7 +17,7 @@ $class = preg_replace('/^\<\?php.*$/m', '', $class);
 $out = $cli ."\n\n". $class;
 
 // update script
-$script_file = dirname(__FILE__).'/sync-db';
+$script_file = dirname(__FILE__).'/dbsync';
 $script = file_get_contents($script_file);
 
 $data = chunk_split(base64_encode($out));

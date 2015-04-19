@@ -4,7 +4,7 @@
         "Read more about it at http://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file",
         "This file is @generated automatically"
     ],
-    "hash": "febb7c1ffdbf0d76aded7aca91b195a6",
+    "hash": "ee751cddd4896b5e88b98b766f369806",
     "packages": [
         {
             "name": "interconnectit/search-replace-db",
