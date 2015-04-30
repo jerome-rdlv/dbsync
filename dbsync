@@ -313,6 +313,11 @@ class DbSync
 
 		$this->config = json_decode(file_get_contents($confFile), true);
 
+        $error = json_last_error();
+        if ($error != JSON_ERROR_NONE) {
+            $this->error('Error reading '. $confFile, json_last_error_msg());
+        }
+
 		// loading environments
 		if (!array_key_exists('environments', $this->config) || !$this->config['environments']) {
 			$this->error('No environment found in config.');
