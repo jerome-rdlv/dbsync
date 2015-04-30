@@ -20,13 +20,16 @@ class DbSync
 	private $marker = '-- sync-db env: ';
 
 	private $opts = array(
-		'c:' => 'conf:',
-		's:' => 'source:',
-		't:' => 'target:',
-		'r'  => 'replacements-only',
-		'n'  => 'no-replacement',
-		'h'  => 'help',
-		'd'  => 'debug'
+        'c:' => 'conf:',
+        's:' => 'source:',
+        't:' => 'target:',
+        'r'  => 'replacements-only',
+        'n'  => 'no-replacement',
+        'f'  => 'fix',
+        'i:' => 'include:',
+        'x:' => 'exclude:',
+        'h'  => 'help',
+        'd'  => 'debug'
 	);
 
 	private $srdbOpts = array(
@@ -51,8 +54,9 @@ class DbSync
 
 	private $cmds = array(
 		'test'     => 'echo "use {base};" | mysql -u "{user}" -p"{pass}" -h "{host}" "{base}"',
-		'source'   => 'mysqldump -u "{user}" -p"{pass}" --add-drop-table --no-create-db -h "{host}" "{base}"',
-		'target'   => 'mysql -u "{user}" -p"{pass}" -h "{host}" "{base}"',
+		'tables'   => 'echo "show tables;" | mysql --skip-column-names -u "{user}" -p"{pass}" -h "{host}" "{base}"',
+		'source'   => 'mysqldump {options} -u "{user}" -p"{pass}" --add-drop-table --no-create-db -h "{host}" "{base}" {tables}',
+		'target'   => 'mysql {options} -u "{user}" -p"{pass}" -h "{host}" "{base}"',
 		'markfile' => '{ echo "{marker}{env}"; cat; } > "{file}"',
 		'tofile'   => ' cat > "{file}"',
 		'cp'       => 'echo "{data}" | php -r "echo base64_decode(stream_get_contents(STDIN));" > {srdb}',
@@ -103,7 +107,13 @@ class DbSync
 		$this->loadConfig();
 		$this->checkConnections();
 
-		// try to extract origin env from the file
+        // tables option handling (after connection check)
+        if ($this->getOpt('include') && $this->getOpt('exclude')) {
+            $this->error('You can’t use include and exclude options at the same time.');
+        }
+        $this->envs['source']['tables'] = $this->getTables();
+
+        // try to extract origin env from the file
 		if ($this->envs['source']['file']) {
 			if ($file = fopen($this->envs['source']['file'], 'r')) {
 				if ($line = fgets($file)) {
@@ -239,7 +249,7 @@ class DbSync
 					'user' => $config['user'],
 					'pass' => $config['pass'],
 					'host' => $config['host']
-				)));
+				)), $output, true);
 				if ($result !== 0) {
 					$this->error('Connection error for ' . $config['env'] . ' environment.', $result);
 				}
@@ -378,10 +388,17 @@ class DbSync
 		echo "      No database transfert, replacements only.\n";
 		echo "    -n, --no-replacements\n";
 		echo "      Do not execute replacements, database transfert only.\n";
+        echo "    -f, --fix\n";
+        echo "      Try to fix database charset problems like double utf8 encoded strings.\n";
+        echo "    -i, --include\n";
+        echo "      Include only given tables in sync. This option may be used multiple times.\n";
+        echo "    -x, --exclude\n";
+        echo "      Exclude tables from sync. This option may be used multiple times.\n";
 		echo "    -d, --debug\n";
-		echo "      Debug mode, no shell_exec execution.\n";
+		echo "      Debug mode, print all commands. No shell_exec execution except for\n";
+        echo "      config tests (connection to distant database, and tables listing).\n";
 		echo "    -h, --help\n";
-		echo "      Disply this help.\n";
+		echo "      Display this help.\n";
 		exit;
 	}
 
@@ -427,6 +444,52 @@ class DbSync
 		}, $format);
 	}
 
+    private function getTables()
+    {
+        $include = $this->getOpt('include');
+        $exclude = $this->getOpt('exclude');
+        if ($include || $exclude) {
+            // get tables
+            $source = $this->envs['source'];
+            $this->exec($this->getCmd('tables', $source['ssh'], array(
+                'user'    => $source['user'],
+                'pass'    => $source['pass'],
+                'base'    => $source['base'],
+                'host'    => $source['host'],
+            )), $output, true);
+            $tables = explode("\n", $output);
+            $available = 'Available tables are: '. implode(' ', $tables);
+
+            if ($include) {
+                if (!is_array($include)) {
+                    $include = array($include);
+                }
+                foreach ($include as $table) {
+                    if (array_search($table, $tables) === false) {
+                        $this->error('The included table `'. $table .'` is not found', $available);
+                    }
+                }
+                return implode(' ', $tables);
+            }
+            if ($exclude) {
+                if (!is_array($exclude)) {
+                    $exclude = array($exclude);
+                }
+                foreach ($exclude as $table) {
+                    $offset = array_search($table, $tables);
+                    if ($offset === false) {
+                        $this->error('The excluded table `'. $table .'` is not found', $available);
+                    }
+                    else {
+                        unset($tables[$offset]);
+                    }
+                }
+                return implode(' ', $tables);
+            }
+        }
+        return '';
+    }
+
 	private function proceed()
 	{
 		echo "\n";
@@ -445,11 +508,13 @@ class DbSync
 			else {
 				// mysql source
 				$sourceCmd = $this->getCmd('source', $source['ssh'], array(
-					'user' => $source['user'],
-					'pass' => $source['pass'],
-					'base' => $source['base'],
-					'host' => $source['host']
-				));
+                    'user'    => $source['user'],
+                    'pass'    => $source['pass'],
+                    'base'    => $source['base'],
+                    'host'    => $source['host'],
+                    'options' => $this->getOpt('fix') ? '--skip-set-charset --default-character-set=latin1' : '',
+                    'tables'  => $source['tables']
+                ));
 			}
 
 			// target
@@ -468,7 +533,8 @@ class DbSync
 					'user' => $target['user'],
 					'pass' => $target['pass'],
 					'base' => $target['base'],
-					'host' => $target['host']
+					'host' => $target['host'],
+                    'options' => $this->getOpt('fix') ? '--default-character-set=utf8' : ''
 				));
 			}
 			$result = $this->exec($sourceCmd .' | '. $targetCmd, $output);
@@ -550,22 +616,16 @@ class DbSync
 		);
 	}
 
-	private function exec($cmd, &$output = null)
+	private function exec($cmd, &$output = null, $force =false)
 	{
-		if ($this->getOpt('debug')) {
-
-			$lmax = 512;
-			if (strlen($cmd) > $lmax) {
-				echo "\n" . substr($cmd, 0, $lmax / 2) . ' ... ';
-				echo substr($cmd, strlen($cmd) - $lmax / 2) . "\n";
-			}
-			else {
-				echo "\n" . $cmd . "\n";
-			}
-
+		if ($this->getOpt('debug') && !$force) {
+            $this->printCmd($cmd);
 			return 0;
 		}
 		else {
+            if ($this->getOpt('debug')) {
+                $this->printCmd($cmd);
+            }
 			$output = '';
 			$result = 0;
 			exec($cmd, $output, $result);
@@ -574,6 +634,18 @@ class DbSync
 			return $result;
 		}
 	}
+
+    private function printCmd($cmd)
+    {
+        $lmax = 512;
+        if (strlen($cmd) > $lmax) {
+            echo "\n" . substr($cmd, 0, $lmax / 2) . ' ... ';
+            echo substr($cmd, strlen($cmd) - $lmax / 2) . "\n";
+        }
+        else {
+            echo "\n" . $cmd . "\n";
+        }
+    }
 
 	private function c($text, $color = 'no', $bold = false)
 	{

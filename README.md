@@ -8,7 +8,7 @@ I’m publishing this here because it might be useful to others, but USE OF THIS
 
 Use `dbsync --help` to get help.
 
-A typical usage is `dbsync --source dev --target preprod` to synchronize the `dev` database with the `preprod` database (moving from `dev` to `prod` and replacing `dev` values with `prod` values).
+A typical usage is `dbsync --source dev --target preprod` to synchronize the `dev` database with the `preprod` database (moving from `dev` to `preprod` and replacing `dev` values with `preprod` values).
 
 ## ssh tunneling
 
@@ -30,3 +30,7 @@ It is possible to use a file name in place of the environment name, either as so
 To dump a database to a file: `dbsync --source prod --target prod-dump.sql`
 
 To restore from a file: `dbsync --source prod-dump.sql --target prod`
+
+## charset fix
+
+You can use the `--fix` option to try a charset repair of your database. It may solve issues with double utf8 encoded characters using [this technique](http://blog.hno3.org/2010/04/22/fixing-double-encoded-utf-8-data-in-mysql/).
