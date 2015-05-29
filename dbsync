@@ -469,12 +469,13 @@ class DbSync
                 if (!is_array($include)) {
                     $include = array($include);
                 }
+                // just checking
                 foreach ($include as $table) {
                     if (array_search($table, $tables) === false) {
                         $this->error('The included table `'. $table .'` is not found', $available);
                     }
                 }
-                return implode(' ', $tables);
+                return implode(' ', $include);
             }
             if ($exclude) {
                 if (!is_array($exclude)) {
@@ -667,7 +668,7 @@ class DbSync
 		/* This is a base64_encode of the merge of `srdb.class.php` and `srdb.cli.php`
 		 * from https://github.com/interconnectit/Search-Replace-DB
 		 */
-		// SRDB-DATA // Updated on 2015-04-19 16:58:40
+		// SRDB-DATA // Updated on 2015-05-29 08:57:01
 		return <<<EOF
 IyEvdXNyL2Jpbi9waHAgLXEKPD9waHAKCi8qKgogKiBUbyBydW4gdGhpcyBzY3JpcHQsIGV4ZWN1
 dGUgc29tZXRoaW5nIGxpa2UgdGhpczoKICogYC4vc3JkYi5jbGkucGhwIC1oIGxvY2FsaG9zdCAt
