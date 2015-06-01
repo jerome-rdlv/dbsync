@@ -9,7 +9,8 @@
             "user": "dev",
             "pass": "dev",
             "base": "sync-db-test_prod",
-            "ssh": "jerome@example.org"
+            "ssh": "jerome@example.org",
+			"php": "/usr/local/bin/php.ORIG.5_4"
         }
     },
     "replacements": [

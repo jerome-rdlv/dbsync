@@ -14,6 +14,10 @@ A typical usage is `dbsync --source dev --target preprod` to synchronize the `de
 
 This tool can works with remote database through SSH. Simply define `ssh` entry in the choosen environment. If your SSH key is set, no password will be prompted.
 
+## PHP executable
+
+The PHP executable can be configured on a per env basis, using the `php` key in env configuration and giving the PHP executable path as value.
+
 ## search / replace
 
 This tool use [interconnectit/Search-Replace-DB

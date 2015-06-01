@@ -14,7 +14,9 @@ class DbSync
 
 	private $config = null;
 
-	private $srdb = '/tmp/srdb_%s.php';
+	private $srdb = 'srdb_%s.php';
+
+    private $defaultPhp = 'php';
 
 	// used to mark source env in dump file
 	private $marker = '-- sync-db env: ';
@@ -30,7 +32,7 @@ class DbSync
         'x:' => 'exclude:',
         'h'  => 'help',
         'd'  => 'debug'
-	);
+    );
 
 	private $srdbOpts = array(
 		't:' => 'tables:',
@@ -59,11 +61,11 @@ class DbSync
 		'target'   => 'mysql {options} -u "{user}" -p"{pass}" -h "{host}" "{base}"',
 		'markfile' => '{ echo "{marker}{env}"; cat; } > "{file}"',
 		'tofile'   => ' cat > "{file}"',
-		'cp'       => 'echo "{data}" | php -r "echo base64_decode(stream_get_contents(STDIN));" > {srdb}',
-		'ssh_cp'   => 'echo "{data}" | php -r "echo base64_decode(stream_get_contents(STDIN));" | ssh {ssh} \'cat > "{srdb}"\'',
+		'cp'       => 'echo "{data}" | {php} -r "echo base64_decode(stream_get_contents(STDIN));" > {srdb}',
+		'ssh_cp'   => 'echo "{data}" | {php} -r "echo base64_decode(stream_get_contents(STDIN));" | ssh {ssh} \'cat > "{srdb}"\'',
 		'chmod'    => 'chmod +x {srdb}',
 		'rm'       => 'rm {srdb}',
-		'replace'  => 'php -f {srdb} -- -n "{base}" -u "{user}" -p"{pass}" -h "{host}" -s"{search}" -r"{replace}" {options}'
+		'replace'  => '{php} -f {srdb} -- -n "{base}" -u "{user}" -p"{pass}" -h "{host}" -s"{search}" -r"{replace}" {options}'
 	);
 
 	private $envs = null;
@@ -142,7 +144,7 @@ class DbSync
 
 		$cData   = 'grey';
 		$cSymbol = 'yellow';
-		
+
 		$items = array('from' => 'source', 'to' => 'target');
 		$out = array();
 
@@ -343,7 +345,8 @@ class DbSync
 				'base' => false,
 				'host' => 'localhost',
 				'ssh' => false,
-				'file' => false
+				'file' => false,
+                'php' => $this->defaultPhp
 			);
 			if (!$val) {
 				$this->error("Please give the $env option", $envList);
@@ -559,6 +562,7 @@ class DbSync
 			$this->exec($this->getCmd('cp', $target['ssh'], array(
 				'data' => $this->getSrdbData(),
 				'srdb' => $this->srdb,
+                'php' => $this->defaultPhp
 			)));
 
 			// chmod +x
@@ -571,7 +575,8 @@ class DbSync
 				'base' => $target['base'],
 				'user' => $target['user'],
 				'pass' => $target['pass'],
-				'host' => $target['host']
+				'host' => $target['host'],
+                'php'  => $target['php']
 			));
 
 			$count = 0;
