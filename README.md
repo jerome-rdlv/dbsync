@@ -38,3 +38,7 @@ To restore from a file: `dbsync --source prod-dump.sql --target prod`
 ## charset fix
 
 You can use the `--fix` option to try a charset repair of your database. It may solve issues with double utf8 encoded characters using [this technique](http://blog.hno3.org/2010/04/22/fixing-double-encoded-utf-8-data-in-mysql/).
+
+## TODO
+
+Allow arbitrary queries in dbsync.json for specific updates / faster and more secure than find/replace
