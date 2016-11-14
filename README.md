@@ -2,7 +2,7 @@
 
 A database synchronization command line tool with support for replacements and SSH tunneling. Its written in PHP but it executes bash commands.
 
-I’m publishing this here because it might be useful to others, but USE OF THIS SCRIPT IS ENTIRELY AT YOUR OWN RISK. I accept no liability from its use..
+I’m publishing this here because it might be useful to others, but USE OF THIS SCRIPT IS ENTIRELY AT YOUR OWN RISK. I accept no liability from its use.
 
 *dbsync* uses a configuration file to  define environments (like dev, prod, preprod, etc.) and replacements (different values for different environments). Have a look at the `dbsync.json` example config.
 
@@ -10,18 +10,71 @@ Use `dbsync --help` to get help.
 
 A typical usage is `dbsync --source dev --target preprod` to synchronize the `dev` database with the `preprod` database (moving from `dev` to `preprod` and replacing `dev` values with `preprod` values).
 
-## ssh tunneling
+## config example
 
-This tool can works with remote database through SSH. Simply define `ssh` entry in the choosen environment. If your SSH key is set, no password will be prompted.
+```json
+{
+    "tables": "^wp_",
+    "environments": {
+        "dev": {
+            "user": "dev",
+            "pass": "dev",
+            "base": "sync-db-test_dev"
+        },
+        "prod": {
+            "user": "dev",
+            "pass": "dev",
+            "base": "sync-db-test_prod",
+            "ssh": "jerome@example.org",
+			"php": "/usr/local/bin/php.ORIG.5_4"
+        }
+    },
+    "replacements": [
+        {
+			"include-cols": "option_value",
+			"dev": "jerome-dev@example.org",
+            "prod": "jerome-prod@example.org"
+        },
+        {
+			"tables": "wp_options",
+            "dev": "dev.example.org",
+            "prod": "prod.example.org"
+        }
+    ]
+}
+```
+
+This config file define two environments. For the *dev* one, only *user*, *pass*
+and *base* are needed. For the *prod* one, we use an ssh proxy (`jerome@example.org`)
+and a specific PHP version (`/usr/local/bin/php.ORIG.5_4`).
+
+## tables filtering
+
+Tables to sync can be defined with the regex based directive `tables`. The
+example config sync only tables which names begin with `wp_`. It’s possible
+to name tables like this :
+
+```json
+    "tables": "^(wp_post|wp_options|my_table)$"
+```
+
+## SSH tunneling
+
+This tool can works with remote database through SSH. Simply define `ssh` entry
+in the choosen environment. If your SSH key is set, no password will be prompted.
+
+The value of the `ssh` directive is the connection string you would use to
+connect your ssh server. In the case of the example config, you could connect
+with `ssh jerome@example.org`.
 
 ## PHP executable
 
-The PHP executable can be configured on a per env basis, using the `php` key in env configuration and giving the PHP executable path as value.
+The PHP executable can be configured on a per env basis, using the `php` key
+in env configuration and giving the PHP executable path as value.
 
 ## search / replace
 
-This tool use [interconnectit/Search-Replace-DB
-](https://github.com/interconnectit/Search-Replace-DB) for the replacements work. It is stored in *base64* in the *dbsync* command file.
+This tool use [interconnectit/Search-Replace-DB](https://github.com/interconnectit/Search-Replace-DB) for the replacements work. It is stored in *base64* in the *dbsync* command file.
 
 Search-Replace-DB, *srdb*, is updated through composer and stored in *dbsync* with a composer script: *update-srdb*.
 
@@ -37,8 +90,10 @@ To restore from a file: `dbsync --source prod-dump.sql --target prod`
 
 ## charset fix
 
-You can use the `--fix` option to try a charset repair of your database. It may solve issues with double utf8 encoded characters using [this technique](http://blog.hno3.org/2010/04/22/fixing-double-encoded-utf-8-data-in-mysql/).
+You can use the `--fix` option to try a charset repair of your database.It may solve issues with double utf8 encoded characters using [this technique](http://blog.hno3.org/2010/04/22/fixing-double-encoded-utf-8-data-in-mysql/).
 
 ## TODO
 
-Allow arbitrary queries in dbsync.json for specific updates / faster and more secure than find/replace
+Allow arbitrary queries in dbsync.json for specific updates / faster and more secure than find/replace.
+
+Improve this doc…
