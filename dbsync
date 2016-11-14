@@ -113,9 +113,16 @@ class DbSync
         if ($this->getOpt('include') && $this->getOpt('exclude')) {
             $this->error('You can’t use include and exclude options at the same time.');
         }
-        $this->envs['source']['tables'] = $this->getTables();
 
-        // try to extract origin env from the file
+        if ($this->envs['source']['file']) {
+            // no table filtering from file
+            $this->envs['source']['tables'] = '';
+        }
+        else {
+            $this->envs['source']['tables'] = $this->getTables();
+        }
+
+            // try to extract origin env from the file
         if ($this->envs['source']['file']) {
             if ($file = fopen($this->envs['source']['file'], 'r')) {
                 if ($line = fgets($file)) {
@@ -178,6 +185,18 @@ class DbSync
                     echo $this->c(' ssh:', $cSymbol) . $this->c($config['ssh'], $cData);
                 }
             }
+            echo "\n";
+        }
+
+        // tables
+        if ($this->envs['source']['tables']) {
+            $tables = implode(
+                "\n". str_pad('', $length - 7),
+                explode(' ', $this->envs['source']['tables'])
+            );
+            echo "\n";
+            echo str_pad( 'tables:', $length - 9, ' ', STR_PAD_LEFT ) . "  ";
+            echo $this->c($tables, $cData);
             echo "\n";
         }
 
@@ -328,14 +347,15 @@ class DbSync
         foreach (array('source', 'target') as $env) {
             $val              = $this->getOpt($env);
             $this->envs[$env] = array(
-                'env'  => false,
-                'user' => false,
-                'pass' => false,
-                'base' => false,
-                'host' => 'localhost',
-                'ssh'  => false,
-                'file' => false,
-                'php'  => $this->defaultPhp
+                'env'       => false,
+                'user'      => false,
+                'pass'      => false,
+                'base'      => false,
+                'host'      => 'localhost',
+                'ssh'       => false,
+                'file'      => false,
+                'php'       => $this->defaultPhp,
+                'protected' => false,
             );
             if (!$val) {
                 $this->error("Please give the $env option", $envList);
@@ -347,11 +367,23 @@ class DbSync
                 $this->envs[$env]['env'] = $val;
             }
         }
+
+        if ($this->envs['target']['protected'] === true) {
+            $token = strtoupper(substr(sha1(rand()), 0, 4));
+            $answer = readline(
+                $this->c("Target env ". $this->envs['target']['env'] ." is protected.\nType ", 'red') .
+                $this->c($token, 'red', true) .
+                $this->c(" if you want to proceed anyway: ", 'red')
+            );
+            if ($answer !== $token) {
+                exit;
+            }
+        }
         
         if (array_key_exists('replacements', $this->config)) {
             foreach ($this->config['replacements'] as $replacement) {
                 foreach (array('source', 'target') as $env) {
-                    if (array_key_exists($this->envs[$env]['env'], $replacement)) {
+                    if ($this->envs[$env]['env'] && array_key_exists($this->envs[$env]['env'], $replacement)) {
                         if (empty($replacement[$this->envs[$env]['env']])) {
                             $this->error("Replacement value can not be empty for env ". $this->envs[$env]['env']);
                         }
@@ -454,9 +486,10 @@ class DbSync
 
     private function getTables()
     {
+        $filter = isset($this->config['tables']) ? $this->config['tables'] : null;
         $include = $this->getOpt('include');
         $exclude = $this->getOpt('exclude');
-        if ($include || $exclude) {
+        if ($filter || $include || $exclude) {
             // get tables
             $source = $this->envs['source'];
             $this->exec($this->getCmd('tables', $source['ssh'], array(
@@ -466,7 +499,15 @@ class DbSync
                 'host' => $source['host'],
             )), $output, true);
             $tables    = explode("\n", $output);
-            $available = 'Available tables are: ' . implode(' ', $tables);
+
+            // filtering
+            if ($filter) {
+                $tables = array_filter($tables, function ($table) use ($filter) {
+                    return preg_match('/'. addslashes($filter) .'/', $table);
+                });
+            }
+
+            $available = "Available tables are:\n - " . implode("\n - ", $tables);
 
             if ($include) {
                 if (!is_array($include)) {
@@ -496,6 +537,8 @@ class DbSync
 
                 return implode(' ', $tables);
             }
+
+            return implode(' ', $tables);
         }
 
         return '';
@@ -672,7 +715,7 @@ class DbSync
         /* This is a base64_encode of the merge of `srdb.class.php` and `srdb.cli.php`
          * from https://github.com/interconnectit/Search-Replace-DB
          */
-        // SRDB-DATA // Updated on 2016-04-26 14:34:31
+        // SRDB-DATA // Updated on 2016-11-14 11:53:40
         return <<<EOF
 IyEvdXNyL2Jpbi9waHAgLXEKPD9waHAKCi8qKgogKiBUbyBydW4gdGhpcyBzY3JpcHQsIGV4ZWN1
 dGUgc29tZXRoaW5nIGxpa2UgdGhpczoKICogYC4vc3JkYi5jbGkucGhwIC1oIGxvY2FsaG9zdCAt

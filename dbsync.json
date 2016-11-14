@@ -1,4 +1,5 @@
 {
+    "tables": "^wp_",
     "environments": {
         "dev": {
             "user": "dev",
