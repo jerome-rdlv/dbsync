@@ -200,9 +200,19 @@ class DbSync
             echo "\n";
         }
 
-        $answer = readline("\nDo you confirm? (yo/N) ");
-
-        return preg_match('/[yo]/', $answer);
+        if ($this->envs['target']['protected'] === true) {
+            $token = strtoupper(substr(sha1(rand()), 0, 4));
+            $answer = readline(
+                $this->c("\nTarget env ". $this->envs['target']['env'] ." is protected!\nType ", 'red') .
+                $this->c($token, 'red', true) .
+                $this->c(" to proceed anyway: ", 'red')
+            );
+            return $answer === $token;
+        }
+        else {
+            $answer = readline( "\nDo you confirm? (yo/N) " );
+            return preg_match('/[yo]/', $answer);
+        }
     }
 
     /**
@@ -368,18 +378,6 @@ class DbSync
             }
         }
 
-        if ($this->envs['target']['protected'] === true) {
-            $token = strtoupper(substr(sha1(rand()), 0, 4));
-            $answer = readline(
-                $this->c("Target env ". $this->envs['target']['env'] ." is protected.\nType ", 'red') .
-                $this->c($token, 'red', true) .
-                $this->c(" if you want to proceed anyway: ", 'red')
-            );
-            if ($answer !== $token) {
-                exit;
-            }
-        }
-        
         if (array_key_exists('replacements', $this->config)) {
             foreach ($this->config['replacements'] as $replacement) {
                 foreach (array('source', 'target') as $env) {
