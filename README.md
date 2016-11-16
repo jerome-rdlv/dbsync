@@ -92,6 +92,12 @@ To restore from a file: `dbsync --source prod-dump.sql --target prod`
 
 You can use the `--fix` option to try a charset repair of your database.It may solve issues with double utf8 encoded characters using [this technique](http://blog.hno3.org/2010/04/22/fixing-double-encoded-utf-8-data-in-mysql/).
 
+## Troubleshooting
+
+If replacements failed, it may be due to a bad PHP version on the target env.
+The SRDB script require PHP >= 5.3.0. In that case, you can use the `php` directive to
+force use of another PHP binary on the target env (if such binary exists).
+
 ## TODO
 
 Allow arbitrary queries in dbsync.json for specific updates / faster and more secure than find/replace.
