@@ -1,6 +1,6 @@
 # dbsync
 
-A database synchronization command line tool with support for replacements and SSH tunneling. Its written in PHP but it executes bash commands.
+A database synchronization command line tool with support for replacements, GZIP transfers and SSH tunneling. Its written in PHP but it executes bash commands.
 
 I’m publishing this here because it might be useful to others, but USE OF THIS SCRIPT IS ENTIRELY AT YOUR OWN RISK. I accept no liability from its use.
 
@@ -26,17 +26,17 @@ A typical usage is `dbsync --source dev --target preprod` to synchronize the `de
             "pass": "dev",
             "base": "sync-db-test_prod",
             "ssh": "jerome@example.org",
-			"php": "/usr/local/bin/php.ORIG.5_4"
+            "php": "/usr/local/bin/php.ORIG.5_4"
         }
     },
     "replacements": [
         {
-			"include-cols": "option_value",
-			"dev": "jerome-dev@example.org",
+            "include-cols": "option_value",
+            "dev": "jerome-dev@example.org",
             "prod": "jerome-prod@example.org"
         },
         {
-			"tables": "wp_options",
+            "tables": "wp_options",
             "dev": "dev.example.org",
             "prod": "prod.example.org"
         }
@@ -44,7 +44,7 @@ A typical usage is `dbsync --source dev --target preprod` to synchronize the `de
 }
 ```
 
-This config file define two environments. For the *dev* one, only *user*, *pass*
+This example config file define two environments. For the *dev* one, only *user*, *pass*
 and *base* are needed. For the *prod* one, we use an ssh proxy (`jerome@example.org`)
 and a specific PHP version (`/usr/local/bin/php.ORIG.5_4`).
 
@@ -54,7 +54,7 @@ Tables to sync can be defined with the regex based directive `tables`. The
 example config sync only tables which names begin with `wp_`. It’s possible
 to name tables like this :
 
-```json
+```
     "tables": "^(wp_post|wp_options|my_table)$"
 ```
 
@@ -69,7 +69,8 @@ with `ssh jerome@example.org`.
 
 ## PHP executable
 
-The PHP executable can be configured on a per env basis, using the `php` key
+The PHP executable is used to execute replacements on the target database.
+It can be configured on a per env basis, using the `php` key
 in env configuration and giving the PHP executable path as value.
 
 ## search / replace
