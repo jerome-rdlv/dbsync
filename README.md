@@ -4,6 +4,8 @@ A database synchronization command line tool with support for replacements, GZIP
 
 I’m publishing this here because it might be useful to others, but USE OF THIS SCRIPT IS ENTIRELY AT YOUR OWN RISK. I accept no liability from its use.
 
+That said, I’ve been successfully using this tool for several years to synchronize WordPress databases between my development, pre-production and production environments.  personnaly use this tool.
+
 *dbsync* uses a configuration file to  define environments (like dev, prod, preprod, etc.) and replacements (different values for different environments). Have a look at the `dbsync.json` example config.
 
 Use `dbsync --help` to get help.
@@ -89,9 +91,20 @@ To dump a database to a file: `dbsync --source prod --target prod-dump.sql`
 
 To restore from a file: `dbsync --source prod-dump.sql --target prod`
 
+If the file ends with `.gz` it will be gzipped. It is possible to use a gzipped file as source file.
+
 ## charset fix
 
 You can use the `--fix` option to try a charset repair of your database.It may solve issues with double utf8 encoded characters using [this technique](http://blog.hno3.org/2010/04/22/fixing-double-encoded-utf-8-data-in-mysql/).
+
+## backups
+
+To backup a database is easy and quick with this tool, so do not hesitate to do so
+before any risky operation.
+
+```
+    dbsync --source prod --target prod_20170512_1235.sql.gz
+```
 
 ## Troubleshooting
 
@@ -102,5 +115,7 @@ force use of another PHP binary on the target env (if such binary exists).
 ## TODO
 
 Allow arbitrary queries in dbsync.json for specific updates / faster and more secure than find/replace.
+
+Allow to use STDIN and STDOUT as source and target.
 
 Improve this doc…
