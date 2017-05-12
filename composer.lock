@@ -4,7 +4,6 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file",
         "This file is @generated automatically"
     ],
-    "hash": "ee751cddd4896b5e88b98b766f369806",
     "content-hash": "504a7b07d7edc829ad0492e77110a5c8",
     "packages": [
         {
@@ -39,7 +38,7 @@
             ],
             "description": "A PHP search replace tool for quickly modifying a string throughout a database. Useful for changing the base URL when migrating a WordPress site from development to production.",
             "homepage": "https://github.com/interconnectit/Search-Replace-DB",
-            "time": "2015-07-07 15:44:12"
+            "time": "2015-07-07T15:44:12+00:00"
         }
     ],
     "packages-dev": [],
