@@ -5,6 +5,32 @@ DbSync::run();
 
 class DbSync
 {
+    const OPT_CONF = 'c';
+    const OPT_SOURCE = 's';
+    const OPT_TARGET = 't';
+    const OPT_REPLACEMENTS_ONLY = 'r';
+    const OPT_NO_REPLACEMENT = 'n';
+    const OPT_FIX = 'f';
+    const OPT_INCLUDE = 'i';
+    const OPT_EXCLUDE = 'x';
+    const OPT_HELP = 'h';
+    const OPT_DEBUG = 'd';
+    const OPT_VERBOSE = 'v';
+    const OPT_FORCE = 'f';
+
+    const LOPT_CONF = 'conf';
+    const LOPT_SOURCE = 'source';
+    const LOPT_TARGET = 'target';
+    const LOPT_REPLACEMENTS_ONLY = 'replacements-only';
+    const LOPT_NO_REPLACEMENT = 'no-replacement';
+    const LOPT_FIX = 'fix';
+    const LOPT_INCLUDE = 'include';
+    const LOPT_EXCLUDE = 'exclude';
+    const LOPT_HELP = 'help';
+    const LOPT_DEBUG = 'debug';
+    const LOPT_VERBOSE = 'verbose';
+    const LOPT_FORCE = 'force';
+
     public static $confDefaultFile = 'dbsync.json';
 
     public static function run()
@@ -22,25 +48,25 @@ class DbSync
     private $marker = '-- sync-db env: ';
 
     private $opts = array(
-        'c:' => 'conf:',
-        's:' => 'source:',
-        't:' => 'target:',
-        'r'  => 'replacements-only',
-        'n'  => 'no-replacement',
-        'f'  => 'fix',
-        'i:' => 'include:',
-        'x:' => 'exclude:',
-        'h'  => 'help',
-        'd'  => 'debug',
-        'v'  => 'verbose',
-        'y'  => 'force'
+        self::OPT_CONF . ':'        => self::LOPT_CONF . ':',
+        self::OPT_SOURCE . ':'      => self::LOPT_SOURCE . ':',
+        self::OPT_TARGET . ':'      => self::LOPT_TARGET . ':',
+        self::OPT_REPLACEMENTS_ONLY => self::LOPT_REPLACEMENTS_ONLY,
+        self::OPT_NO_REPLACEMENT    => self::LOPT_NO_REPLACEMENT,
+        self::OPT_FIX               => self::LOPT_FIX,
+        self::OPT_INCLUDE . ':'     => self::LOPT_INCLUDE . ':',
+        self::OPT_EXCLUDE . ':'     => self::LOPT_EXCLUDE . ':',
+        self::OPT_HELP              => self::LOPT_HELP,
+        self::OPT_DEBUG             => self::LOPT_DEBUG,
+        self::OPT_VERBOSE           => self::LOPT_VERBOSE,
+        self::OPT_FORCE             => self::LOPT_FORCE,
     );
 
     private $srdbOpts = array(
         't:' => 'tables:',
         'i:' => 'include-cols:',
         'x:' => 'exclude-cols:',
-        'g'  => 'regex'
+        'g'  => 'regex',
     );
 
     private $options = null;
@@ -59,7 +85,7 @@ class DbSync
 
     private $cmds = array(
         'test'      => 'echo "use {base};" | mysql -u "{user}" -p"{pass}" -h "{host}" "{base}"',
-        'gzip_test'  => 'gzip -V',
+        'gzip_test' => 'gzip -V',
         'tables'    => 'echo "show tables;" | mysql --skip-column-names -u "{user}" -p"{pass}" -h "{host}" "{base}"',
         'source'    => 'mysqldump {options} -u "{user}" -p"{pass}" --add-drop-table --no-create-db -h "{host}" "{base}" {tables} {gzip}',
         'target'    => '{gzip} mysql {options} -u "{user}" -p"{pass}" -h "{host}" "{base}"',
@@ -109,7 +135,7 @@ class DbSync
         // path
         $this->exec('pwd', $this->path);
 
-        if ($this->getOpt('help')) {
+        if ($this->getOpt(self::OPT_HELP)) {
             $this->help();
         }
 
@@ -117,8 +143,13 @@ class DbSync
         $this->checkConnections();
 
         // tables option handling (after connection check)
-        if ($this->getOpt('include') && $this->getOpt('exclude')) {
+        if ($this->getOpt(self::OPT_INCLUDE) && $this->getOpt(self::OPT_EXCLUDE)) {
             $this->error('You can’t use include and exclude options at the same time.');
+        }
+
+        // exclusive options
+        if ($this->getOpt(self::OPT_NO_REPLACEMENT) && $this->getOpt(self::OPT_REPLACEMENTS_ONLY)) {
+            $this->error('You can’t use no-replacement and replacements-only options at the same time.');
         }
 
         if ($this->envs['source']['file']) {
@@ -142,15 +173,17 @@ class DbSync
         }
 
         // everything ok, display confirm message
-        if ($this->getOpt('force') || $this->confirm()) {
+        if ($this->getOpt(self::OPT_FORCE) || $this->confirm()) {
             $this->proceed();
         }
     }
 
     private function confirm()
     {
-        if ($this->getOpt('replacements-only')) {
-            echo "\nReady to apply replacements:\n\n";
+        if ($this->getOpt(self::OPT_REPLACEMENTS_ONLY)) {
+            echo "\nReady to apply replacements (no transfert):\n\n";
+        } elseif ($this->getOpt(self::OPT_NO_REPLACEMENT)) {
+            echo "\nReady to transfert (no replacement):\n\n";
         } else {
             echo "\nReady to sync:\n\n";
         }
@@ -267,7 +300,7 @@ class DbSync
         $gzipUseful = false;
 
         // gzip may be useful for db transfert only
-        if (!$this->getOpt('replacements-only')) {
+        if (!$this->getOpt(self::OPT_REPLACEMENTS_ONLY)) {
 
             // gzip is useful if one of the end (at least) is remote
             foreach ($this->envs as $env => $config) {
@@ -283,7 +316,7 @@ class DbSync
 
         foreach ($this->envs as $env => &$config) {
             // don’t need to test source if only doing replacements on target
-            if ($env !== 'source' || !$this->getOpt('replacements-only')) {
+            if ($env !== 'source' || !$this->getOpt(self::OPT_REPLACEMENTS_ONLY)) {
                 if ($config['file']) {
 
                     // check file
@@ -306,7 +339,7 @@ class DbSync
                     }
 
                     // check gzip support (for db transfert only ; only if useful)
-                    if (!$this->getOpt('replacements-only') && $gzipUseful && $gzipAvailable) {
+                    if (!$this->getOpt(self::OPT_REPLACEMENTS_ONLY) && $gzipUseful && $gzipAvailable) {
                         $result = $this->exec($this->getCmd('gzip_test', $config['ssh']), $output, true);
                         if ($result !== 0) {
                             $gzipAvailable = false;
@@ -362,7 +395,7 @@ class DbSync
 
     private function loadConfig()
     {
-        $confFile = $this->getOpt('conf');
+        $confFile = $this->getOpt(self::OPT_CONF);
         if (!$confFile) {
             $confFile = self::$confDefaultFile;
         }
@@ -386,10 +419,10 @@ class DbSync
         $envList = $this->getEnvList();
 
         // must have source and target
-        if (!$this->getOpt('source')) {
+        if (!$this->getOpt(self::OPT_SOURCE)) {
             $this->error('Missing source environment', $envList, true);
         }
-        if (!$this->getOpt('target')) {
+        if (!$this->getOpt(self::OPT_TARGET)) {
             $this->error('Missing target environment or output file', $envList, true);
         }
 
@@ -460,30 +493,30 @@ class DbSync
     private function help()
     {
         echo "Usage : " . $this->script . " [-c config_file] -s source -t target\n";
-        echo "    -c, --conf\n";
+        echo "    -". self::OPT_CONF .", --". self::LOPT_CONF ."\n";
         echo "      Configuration file to read. Defaults to " . self::$confDefaultFile . ".\n";
-        echo "    -s, --source\n";
+        echo "    -". self::OPT_SOURCE .", --". self::LOPT_SOURCE ."\n";
         echo "      Source environment name or file path\n";
-        echo "    -t, --target\n";
+        echo "    -". self::OPT_TARGET .", --". self::LOPT_TARGET ."\n";
         echo "      Target environment name or file path.\n";
-        echo "    -r, --replacements-only\n";
+        echo "    -". self::OPT_REPLACEMENTS_ONLY .", --". self::LOPT_REPLACEMENTS_ONLY ."\n";
         echo "      No database transfert, replacements on target only.\n";
-        echo "    -n, --no-replacements\n";
+        echo "    -". self::OPT_NO_REPLACEMENT .", --". self::LOPT_NO_REPLACEMENT ."\n";
         echo "      Do not execute replacements, database transfert only.\n";
-        echo "    -f, --fix\n";
+        echo "    -". self::OPT_FIX.", --". self::LOPT_FIX ."\n";
         echo "      Try to fix database charset problems like double utf8 encoded strings.\n";
-        echo "    -i, --include\n";
+        echo "    -". self::OPT_INCLUDE .", --". self::LOPT_INCLUDE ."\n";
         echo "      Include only given tables in sync. This option may be used multiple times.\n";
-        echo "    -x, --exclude\n";
+        echo "    -". self::OPT_EXCLUDE .", --". self::LOPT_EXCLUDE ."\n";
         echo "      Exclude tables from sync. This option may be used multiple times.\n";
-        echo "    -d, --debug\n";
+        echo "    -". self::OPT_DEBUG .", --". self::LOPT_DEBUG ."\n";
         echo "      Debug mode, print all commands. No shell_exec execution except for\n";
         echo "      config tests (connection to distant database, and tables listing).\n";
-        echo "    -v, --verbose\n";
+        echo "    -". self::OPT_VERBOSE .", --". self::LOPT_VERBOSE ."\n";
         echo "      Verbose mode, print all executed commands.\n";
-        echo "    -f, --force\n";
+        echo "    -". self::OPT_FORCE .", --". self::LOPT_FORCE ."\n";
         echo "      Do not prompt for confirmation.\n";
-        echo "    -h, --help\n";
+        echo "    -". self::OPT_HELP .", --". self::LOPT_HELP ."\n";
         echo "      Display this help.\n";
         exit;
     }
@@ -531,8 +564,8 @@ class DbSync
     private function getTables()
     {
         $filter = isset($this->config['tables']) ? $this->config['tables'] : null;
-        $include = $this->getOpt('include');
-        $exclude = $this->getOpt('exclude');
+        $include = $this->getOpt(self::OPT_INCLUDE);
+        $exclude = $this->getOpt(self::OPT_EXCLUDE);
         if ($filter || $include || $exclude) {
             // get tables
             $source = $this->envs['source'];
@@ -594,11 +627,11 @@ class DbSync
         $source = $this->envs['source'];
         $target = array_key_exists('target', $this->envs) ? $this->envs['target'] : null;
 
-        if (!$this->getOpt('replacements-only')) {
+        if (!$this->getOpt(self::OPT_REPLACEMENTS_ONLY)) {
             $this->transfert($source, $target);
         }
 
-        if (!$this->getOpt('no-replacement')
+        if (!$this->getOpt(self::OPT_NO_REPLACEMENT)
             && array_key_exists('replacements', $this->config)
             && $source['env']
             && $target['env']
@@ -636,7 +669,7 @@ class DbSync
                 'pass' => $source['pass'],
                 'base' => $source['base'],
                 'host' => $source['host'],
-                'options' => $this->getOpt('fix') ? '--skip-set-charset --default-character-set=latin1' : '',
+                'options' => $this->getOpt(self::OPT_FIX) ? '--skip-set-charset --default-character-set=latin1' : '',
                 'tables' => $source['tables'],
                 'gzip' => $this->gzip ? ' | gzip ' : '',
             ));
@@ -665,7 +698,7 @@ class DbSync
                 'pass' => $target['pass'],
                 'base' => $target['base'],
                 'host' => $target['host'],
-                'options' => $this->getOpt('fix') ? '--default-character-set=utf8' : '',
+                'options' => $this->getOpt(self::OPT_FIX) ? '--default-character-set=utf8' : '',
                 'gzip' => $this->gzip ? 'gzip -d | ' : '',
             ));
         }
@@ -790,12 +823,12 @@ class DbSync
 
     private function exec($cmd, &$output = null, $force = false)
     {
-        if ($this->getOpt('debug') && !$force) {
+        if ($this->getOpt(self::OPT_DEBUG) && !$force) {
             $this->printCmd($cmd);
 
             return 0;
         } else {
-            if ($this->getOpt('debug') || $this->getOpt('verbose')) {
+            if ($this->getOpt(self::OPT_DEBUG) || $this->getOpt(self::OPT_VERBOSE)) {
                 $this->printCmd($cmd);
             }
             $output = '';
