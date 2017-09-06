@@ -147,9 +147,10 @@ class App
         $this->checkConnections();
 
         // tables option handling (after connection check)
-        if ($this->getOpt(self::OPT_INCLUDE) && $this->getOpt(self::OPT_EXCLUDE)) {
-            $this->error('You can’t use include and exclude options at the same time.');
-        }
+        // now inclusion is treated before, then exclusion on the resulting table list
+//        if ($this->getOpt(self::OPT_INCLUDE) && $this->getOpt(self::OPT_EXCLUDE)) {
+//            $this->error('You can’t use include and exclude options at the same time.');
+//        }
 
         // exclusive options
         if ($this->getOpt(self::OPT_NO_REPLACEMENT) && $this->getOpt(self::OPT_REPLACEMENTS_ONLY)) {
@@ -600,14 +601,15 @@ class App
                 if (!is_array($include)) {
                     $include = array($include);
                 }
-                // just checking
+                // just checking if all included tables exist
                 foreach ($include as $table) {
                     if (array_search($table, $tables) === false) {
                         $this->error('The included table `' . $table . '` is not found', $available);
                     }
                 }
-                return $include;
+                $tables = $include;
             }
+
             if ($exclude) {
                 if (!is_array($exclude)) {
                     $exclude = array($exclude);
