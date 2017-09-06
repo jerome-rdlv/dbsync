@@ -1,29 +1,32 @@
 {
-  "tables": "^wp_",
-  "environments": {
-    "dev": {
-      "user": "dev",
-      "pass": "dev",
-      "base": "sync-db-test_dev"
+    "tables": "^wp_",
+    "environments": {
+        "dev": {
+            "user": "dev",
+            "pass": "dev",
+            "host": "localhost",
+            "base": "sync-db-test_dev",
+            "port": "3306"
+        },
+        "prod": {
+            "user": "dev",
+            "pass": "dev",
+            "base": "sync-db-test_prod",
+            "ssh": "jerome@example.org",
+            "host": "localhost",
+            "php": "/usr/local/bin/php.ORIG.5_4"
+        }
     },
-    "prod": {
-      "user": "dev",
-      "pass": "dev",
-      "base": "sync-db-test_prod",
-      "ssh": "jerome@example.org",
-      "php": "/usr/local/bin/php.ORIG.5_4"
-    }
-  },
-  "replacements": [
-    {
-      "include-cols": "option_value",
-      "dev": "jerome-dev@example.org",
-      "prod": "jerome-prod@example.org"
-    },
-    {
-      "tables": "wp_options",
-      "dev": "dev.example.org",
-      "prod": "prod.example.org"
-    }
-  ]
+    "replacements": [
+        {
+            "include-cols": "option_value",
+            "dev": "jerome-dev@example.org",
+            "prod": "jerome-prod@example.org"
+        },
+        {
+            "tables": "wp_options",
+            "dev": "dev.example.org",
+            "prod": "prod.example.org"
+        }
+    ]
 }

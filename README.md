@@ -67,6 +67,8 @@ to name tables like this :
     "tables": "^(wp_post|wp_options|my_table)$"
 ```
 
+The value of this parameter is given to the PHP function `preg_match`.
+
 ## SSH tunneling
 
 This tool can works with remote database through SSH. Simply define `ssh` entry
@@ -85,10 +87,10 @@ in env configuration and giving the PHP executable path as value.
 ## search / replace
 
 This tool use [interconnectit/Search-Replace-DB](https://github.com/interconnectit/Search-Replace-DB)
-for the replacements work. It is stored in *base64* in the *dbsync* command file.
+for the replacements work.
 
-Search-Replace-DB, *srdb*, is updated through composer and stored in *dbsync* with
-a composer script: *update-srdb*.
+Search-Replace-DB, *srdb*, is sent on the target env for local execution,
+and dropped after replacements are done.
 
 Some Search-Replace-DB command line options are usable: `tables`, `include-cols`,
 `exclude-cols` and `regex`. They must be defined for each replacement (see `dbsync.json`)
