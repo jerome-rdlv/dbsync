@@ -1,25 +1,22 @@
 {
-	"name": "rdlv/dbsync",
+	"name": "jerome-rdlv/dbsync",
 	"description": "A database synchronization tool with support for replacements and SSH tunneling.",
+	"homepage": "https://github.com/jerome-rdlv/dbsync",
 	"type": "project",
 	"license": "CC-BY-4.0",
 	"authors": [
 		{
 			"name": "Jérôme Mulsant",
 			"email": "jerome@rue-de-la-vieille.fr",
-			"homepage": "http://rue-de-la-vieille.fr",
-			"role": "developer"
+			"homepage": "https://rue-de-la-vieille.fr"
 		}
 	],
 	"require": {
-		"interconnectit/search-replace-db": "^3"
+		"interconnectit/search-replace-db": "^3",
+		"greenlion/PHP-SQL-Parser": "^4.1.2"
 	},
-	"scripts": {
-		"post-install-cmd": [
-			"./update-srdb"
-		],
-		"post-update-cmd": [
-			"./update-srdb"
-		]
-	}
+	"autoload": {
+		"psr-0": {"Rdlv": "src/"}
+	},
+	"bin": ["bin/dbsync"]
 }
