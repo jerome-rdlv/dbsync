@@ -101,7 +101,7 @@ class App
         'chmod'     => 'chmod +x {srdb}',
         'rm'        => 'rm {srdb}',
         'srdb_test' => '{php} -f {srdb} -- -v -n "{base}" -u "{user}" -p"{pass}" -h "{host}" --port {port}',
-        'replace'   => '{php} -f {srdb} -- -n "{base}" -u "{user}" -p"{pass}" -h "{host}" --port {port} -s"{search}" -r"{replace}" {tables} {options}',
+        'replace'   => '{php} -f {srdb} -- -n "{base}" -u "{user}" -p"{pass}" -h "{host}" --port {port} -s"{search}" -r"{replace}" {options}',
     );
 
     private $envs = null;
@@ -772,7 +772,6 @@ class App
             'host' => $target['host'],
             'port' => $target['port'],
             'php' => $target['php'],
-            'tables' => $source['tables'] ? '-t'. implode(',', $source['tables']) : ''
         ));
 
         // pre-replacement test
@@ -805,21 +804,28 @@ class App
                 continue;
             }
             // options
-            $options = '';
+            $options = [];
+
+            // limit replacement on source table names by default
+            $options['tables'] = '--tables "'. implode(',', $source['tables']) .'"';
+
             foreach ($this->srdbOpts as $short => $long) {
                 $optName = str_replace(':', '', $long);
                 if (array_key_exists($optName, $replacement)) {
-                    $options .= ' --' . $optName;
+                    $options[$optName] = '--'. $optName;
+
+                    // if option require a value
                     if ($optName != $long) {
-                        $options .= ' "' . $replacement[$optName] . '"';
+                        $options[$optName] .= ' "'. $replacement[$optName] .'"';
                     }
                 }
             }
+
             $output = '';
             $result = $this->exec($this->nvsprintf($replaceCmd, array(
                 'search' => $replacement[$source['env']],
                 'replace' => $replacement[$target['env']],
-                'options' => $options
+                'options' => implode(' ', $options)
             )), $output);
 
             if ($result !== 0) {
