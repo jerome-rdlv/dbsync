@@ -2,6 +2,7 @@
 
 namespace Rdlv\DbSync;
 
+use PHPSQLParser\PHPSQLParser;
 use ReflectionClass;
 
 class App
@@ -155,13 +156,7 @@ class App
             $this->error('You can’t use no-replacement and replacements-only options at the same time.');
         }
 
-        if ($this->envs['source']['file']) {
-            // no table filtering from file
-            $this->envs['source']['tables'] = array();
-        }
-        else {
-            $this->envs['source']['tables'] = $this->getTables();
-        }
+        $this->envs['source']['tables'] = $this->getTables();
 
         // try to extract origin env from the file
         if ($this->envs['source']['file']) {
@@ -576,14 +571,19 @@ class App
 
         // get tables
         $source = $this->envs['source'];
-        $this->exec($this->getCmd('tables', $source['ssh'], array(
-            'user' => $source['user'],
-            'pass' => $source['pass'],
-            'base' => $source['base'],
-            'host' => $source['host'],
-            'port' => $source['port'],
-        )), $output, true);
-        $tables    = explode(PHP_EOL, $output);
+        if ($source['file']) {
+            $tables = $this->loadTablesFromFile($source['file']);
+        }
+        else {
+            $this->exec($this->getCmd('tables', $source['ssh'], array(
+                'user' => $source['user'],
+                'pass' => $source['pass'],
+                'base' => $source['base'],
+                'host' => $source['host'],
+                'port' => $source['port'],
+            )), $output, true);
+            $tables = explode(PHP_EOL, $output);
+        }
 
         if ($filter || $include || $exclude) {
 
@@ -620,6 +620,35 @@ class App
                         unset($tables[$offset]);
                     }
                 }
+            }
+        }
+
+        return $tables;
+    }
+
+    private function getFileContents($file)
+    {
+        $handle = gzopen($file, 'r');
+
+        $contents = '';
+        while ($data = gzread($handle, 10000)) {
+            $contents .= $data;
+        }
+        gzclose($handle);
+        return $contents;
+    }
+
+    private function loadTablesFromFile($file)
+    {
+        $tables = array();
+        preg_match_all('/^CREATE TABLE.*?;/ims', $this->getFileContents($file), $matches,  PREG_SET_ORDER);
+
+        if ($matches) {
+            $parser = new PHPSQLParser();
+
+            foreach ($matches as $match) {
+                $expression = $parser->parse($match[0]);
+                $tables[] = $expression['TABLE']['no_quotes']['parts'][0];
             }
         }
 
