@@ -1,13 +1,5 @@
 <?php
 
-//namespace RdlvDbSyncReplace;
-
-//use Exception;
-//use mysqli;
-//use PDO;
-//use PDOException;
-//use PDOStatement;
-
 // php 5.3 date timezone requirement, shouldn't affect anything
 date_default_timezone_set('Europe/London');
 
@@ -1424,14 +1416,20 @@ abstract class Node
      * @return integer Replacement count
      */
     abstract public function replace($callback);
+}
+
+abstract class NodeArrayContent extends Node
+{
+    /** @var Node[] */
+    public $content;
 
     /**
      * @param $array Node[]
      */
-    protected function arrayToString($array)
+    protected function arrayToString()
     {
         $output = '';
-        foreach ($array as $key => $item) {
+        foreach ($this->content as $key => $item) {
             if (is_string($key)) {
                 $output .= sprintf('s:%d:"%s";', strlen($key), $key);
             } else {
@@ -1447,24 +1445,39 @@ abstract class Node
      * @param $search string
      * @param $replacement string
      */
-    protected function replaceInArray($array, $callback)
+    protected function replaceInArray($callback)
     {
-        return array_reduce($array, function ($count, $item) use ($callback) {
+        $count = 0;
+        
+        // replace in keys
+        $new = [];
+        foreach ($this->content as $key => $node) {
+            if (is_string($key)) {
+                $newkey = $callback($key);
+                if ($newkey != $key) {
+                    ++$count;
+                    $key = $newkey;
+                }
+            }
+            $new[$key] = $node;
+        }
+        $this->content = $new;
+
+        $count += array_reduce($this->content, function ($count, $item) use ($callback) {
             /** @var $item Node */
             return $count + $item->replace($callback);
         }, 0);
+        
+        return $count;
     }
 }
 
-class NodeObject extends Node
+class NodeObject extends NodeArrayContent
 {
     const FORMAT = 'O:%d:"%s":%d:{%s}';
 
     /** @var string */
     public $type;
-
-    /** @var Node[] */
-    public $content;
 
     public function toString()
     {
@@ -1473,7 +1486,7 @@ class NodeObject extends Node
             strlen($this->type),
             $this->type,
             count($this->content),
-            $this->arrayToString($this->content)
+            $this->arrayToString()
         );
         return $output;
     }
@@ -1486,16 +1499,13 @@ class NodeObject extends Node
 
     public function replace($callback)
     {
-        return $this->replaceInArray($this->content, $callback);
+        return $this->replaceInArray($callback);
     }
 }
 
-class NodeArray extends Node
+class NodeArray extends NodeArrayContent
 {
     const FORMAT = 'a:%d:{%s}';
-
-    /** @var Node[] */
-    public $content;
 
     /** @return string */
     public function toString()
@@ -1503,7 +1513,7 @@ class NodeArray extends Node
         return sprintf(
             self::FORMAT,
             count($this->content),
-            $this->arrayToString($this->content)
+            $this->arrayToString()
         );
     }
 
@@ -1514,7 +1524,7 @@ class NodeArray extends Node
 
     public function replace($callback)
     {
-        return $this->replaceInArray($this->content, $callback);
+        return $this->replaceInArray($callback);
     }
 }
 
