@@ -4,20 +4,66 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file",
         "This file is @generated automatically"
     ],
-    "content-hash": "e841c5e3b60a984fa4a311f8422226d7",
+    "content-hash": "c55ed1b0eb574618585562987672d877",
     "packages": [
         {
-            "name": "analog/analog",
-            "version": "1.0.9-stable",
+            "name": "academe/serializeparser",
+            "version": "1.0.2",
             "source": {
                 "type": "git",
-                "url": "https://github.com/jbroadway/analog.git",
-                "reference": "2f0f5e0be983bf84e97dd86f39465a486f9f3af6"
+                "url": "https://github.com/academe/SerializeParser.git",
+                "reference": "d97bb1ddf93c970dca9cd78f457ae2ccdc03b8c7"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/jbroadway/analog/zipball/2f0f5e0be983bf84e97dd86f39465a486f9f3af6",
-                "reference": "2f0f5e0be983bf84e97dd86f39465a486f9f3af6",
+                "url": "https://api.github.com/repos/academe/SerializeParser/zipball/d97bb1ddf93c970dca9cd78f457ae2ccdc03b8c7",
+                "reference": "d97bb1ddf93c970dca9cd78f457ae2ccdc03b8c7",
+                "shasum": ""
+            },
+            "require": {
+                "php": ">=5.4.0"
+            },
+            "require-dev": {
+                "phpunit/phpunit": "~4.0"
+            },
+            "type": "package",
+            "autoload": {
+                "psr-4": {
+                    "Academe\\SerializeParser\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Jason Judge",
+                    "email": "jason.judge@academe.co.uk",
+                    "homepage": "https://academe.co.uk/"
+                }
+            ],
+            "description": "A PHP parser for serialized data, to be able to 'peek' into serialize strings.",
+            "homepage": "https://github.com/academe/SerializeParser",
+            "keywords": [
+                "php",
+                "serialize",
+                "unserialize"
+            ],
+            "time": "2017-02-27T12:16:16+00:00"
+        },
+        {
+            "name": "analog/analog",
+            "version": "1.0.10-stable",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/jbroadway/analog.git",
+                "reference": "65dce6b5aff8c77307c783e607c04a35df8259d6"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/jbroadway/analog/zipball/65dce6b5aff8c77307c783e607c04a35df8259d6",
+                "reference": "65dce6b5aff8c77307c783e607c04a35df8259d6",
                 "shasum": ""
             },
             "require": {
@@ -41,7 +87,7 @@
                     "homepage": "http://www.johnnybroadway.com/"
                 }
             ],
-            "description": "PHP 5.3+ micro logging class that can be extended via closures. Includes several pre-built handlers including file, mail, syslog, HTTP post, and MongoDB.",
+            "description": "PHP logging class that can be extended via closures. Includes several pre-built handlers including file, mail, syslog, HTTP post, and MongoDB.",
             "homepage": "https://github.com/jbroadway/analog",
             "keywords": [
                 "alerts",
@@ -53,7 +99,7 @@
                 "logging",
                 "syslog"
             ],
-            "time": "2016-11-17T14:39:33+00:00"
+            "time": "2017-09-17T02:30:30+00:00"
         },
         {
             "name": "greenlion/php-sql-parser",

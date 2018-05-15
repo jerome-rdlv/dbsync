@@ -13,7 +13,8 @@
 	],
 	"require": {
 		"interconnectit/search-replace-db": "^3",
-		"greenlion/PHP-SQL-Parser": "^4.1.2"
+		"greenlion/PHP-SQL-Parser": "^4.1.2",
+		"academe/SerializeParser": "^1.0"
 	},
 	"autoload": {
 		"psr-0": {"Rdlv": "src/"}

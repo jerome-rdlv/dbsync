@@ -44,7 +44,7 @@ class App
 
     private $config = null;
 
-    private $srdb = 'srdb_%s.php';
+    private $dbr = 'dbr_%s.php';
 
     private $defaultPhp = 'php';
 
@@ -66,7 +66,7 @@ class App
         self::OPT_FORCE             => self::LOPT_FORCE,
     );
 
-    private $srdbOpts = array(
+    private $dbrOpts = array(
         't:' => 'tables:',
         'i:' => 'include-cols:',
         'x:' => 'exclude-cols:',
@@ -96,12 +96,12 @@ class App
         'markfile'  => '{ echo "{marker}{env}"; cat; } {gzip} > "{file}"',
         'tofile'    => ' cat {gzip} > "{file}"',
         'fromfile'  => ' cat "{file}" {gzip}',
-        'cp'        => 'echo "{data}" | {php} -r "echo base64_decode(stream_get_contents(STDIN));" > {srdb}',
-        'ssh_cp'    => 'echo "{data}" | {php} -r "echo base64_decode(stream_get_contents(STDIN));" | ssh {ssh} \'cat > "{srdb}"\'',
-        'chmod'     => 'chmod +x {srdb}',
-        'rm'        => 'rm {srdb}',
-        'srdb_test' => '{php} -f {srdb} -- -v -n "{base}" -u "{user}" -p"{pass}" -h "{host}" --port {port}',
-        'replace'   => '{php} -f {srdb} -- -n "{base}" -u "{user}" -p"{pass}" -h "{host}" --port {port} -s"{search}" -r"{replace}" {options}',
+        'cp'        => 'echo "{data}" | {php} -r "echo base64_decode(stream_get_contents(STDIN));" > {dbr}',
+        'ssh_cp'    => 'echo "{data}" | {php} -r "echo base64_decode(stream_get_contents(STDIN));" | ssh {ssh} \'cat > "{dbr}"\'',
+        'chmod'     => 'chmod +x {dbr}',
+        'rm'        => 'rm {dbr}',
+        'dbr_test' => '{php} -f {dbr} -- -v -n "{base}" -u "{user}" -p"{pass}" -h "{host}" --port {port}',
+        'replace'   => '{php} -f {dbr} -- -n "{base}" -u "{user}" -p"{pass}" -h "{host}" --port {port} -s"{search}" -r"{replace}" {options}',
     );
 
     private $envs = null;
@@ -120,8 +120,8 @@ class App
             array_values($this->opts)
         );
 
-        // srdb
-        $this->srdb = sprintf($this->srdb, uniqid());
+        // dbr 
+        $this->dbr = sprintf($this->dbr, uniqid());
 
         // generate ssh cmds
         $cmds = array();
@@ -752,20 +752,20 @@ class App
     {
         $this->doing('replacements in database...');
 
-        // copy srdb to tmp
+        // copy dbr to tmp
         $this->exec($this->getCmd('cp', $target['ssh'], array(
-            'data' => $this->getSrdbData(),
-            'srdb' => $this->srdb,
+            'data' => $this->getDbrData(),
+            'dbr' => $this->dbr,
             'php' => $this->defaultPhp
         )));
 
         // chmod +x
 //            $this->exec($this->getCmd('chmod', $target['ssh'], array(
-//                'srdb' => $this->srdb,
+//                'dbr' => $this->dbr,
 //            )));
 
         $replaceCmd = $this->getCmd('replace', $target['ssh'], array(
-            'srdb' => $this->srdb,
+            'dbr' => $this->dbr,
             'base' => $target['base'],
             'user' => $target['user'],
             'pass' => $target['pass'],
@@ -776,8 +776,8 @@ class App
 
         // pre-replacement test
         $output = '';
-        $result = $this->exec($this->getCmd('srdb_test', $target['ssh'], array(
-            'srdb' => $this->srdb,
+        $result = $this->exec($this->getCmd('dbr_test', $target['ssh'], array(
+            'dbr' => $this->dbr,
             'base' => $target['base'],
             'user' => $target['user'],
             'pass' => $target['pass'],
@@ -787,7 +787,7 @@ class App
         )), $output);
 
         if ($result !== 0) {
-            $this->removeSrdb($target);
+            $this->removeDbr($target);
             $this->fail('replacements failed, errors follow...');
             echo PHP_EOL . $output . PHP_EOL;
             exit;
@@ -809,7 +809,7 @@ class App
             // limit replacement on source table names by default
             $options['tables'] = '--tables "'. implode(',', $source['tables']) .'"';
 
-            foreach ($this->srdbOpts as $short => $long) {
+            foreach ($this->dbrOpts as $short => $long) {
                 $optName = str_replace(':', '', $long);
                 if (array_key_exists($optName, $replacement)) {
                     $options[$optName] = '--'. $optName;
@@ -837,7 +837,7 @@ class App
             ++$count;
         }
 
-        $this->removeSrdb($target);
+        $this->removeDbr($target);
 
         if ($errors) {
             $this->fail('replacements failed, errors follow...');
@@ -848,10 +848,10 @@ class App
         }
     }
 
-    private function removeSrdb($target)
+    private function removeDbr($target)
     {
         $this->exec($this->getCmd('rm', $target['ssh'], array(
-            'srdb' => $this->srdb,
+            'dbr' => $this->dbr,
             'ssh' => $target['ssh']
         )));
     }
@@ -912,22 +912,28 @@ class App
     /**
      * @return string SRDB script as base64 string for transfert
      */
-    private function getSrdbData()
+    private function getDbrData()
     {
-        $classPath = (new ReflectionClass('icit_srdb'))->getFileName();
-        $cliPath = dirname($classPath) . '/srdb.cli.php';
+        $path = realpath(__DIR__ .'/../../../dbreplace.php');
+//        $classPath = (new ReflectionClass('icit_srdb'))->getFileName();
+//        $cliPath = dirname($classPath) . '/srdb.cli.php';
 
-        $class = file_get_contents($classPath);
-        $cli = file_get_contents($cliPath);
+//        $class = file_get_contents($classPath);
+//        $cli = file_get_contents($cliPath);
+        $script = file_get_contents($path);
 
         // drop require in cli
-        $regex = '/^require_once.*'. str_replace('.', '\.', 'srdb.class.php') .'.*$/m';
-        $cli = preg_replace($regex, '// -- inserted at the end of this file --', $cli);
+//        $regex = '/^require_once.*'. str_replace('.', '\.', 'srdb.class.php') .'.*$/m';
+//        $cli = preg_replace($regex, '// -- inserted at the end of this file --', $cli);
 
         // drop php open tag
-        $class = preg_replace('/^\<\?php.*$/m', '', $class);
-        $out = $cli .PHP_EOL. $class;
+//        $class = preg_replace('/^\<\?php.*$/m', '', $class);
+//        $out = $cli .PHP_EOL. $class;
 
-        return chunk_split(base64_encode($out));
+        return chunk_split(
+            base64_encode(
+                file_get_contents(__DIR__ .'/../../../dbreplace.php')
+            )
+        );
     }
 }
