@@ -1,0 +1,38 @@
+# working only with tables that begin with “wp_”
+tables: ^wp_
+
+environments:
+    dev:
+        user: dev-user
+        pass: dev-pass
+        host: localhost
+        base: sync-db-test_dev
+        port: 3306
+    prod:
+        user: prod-user
+        pass: prod-pass
+        base: sync-db-test_prod
+
+        # db host (often localhost and used with ssh param)
+        host: localhost
+
+        # connection will be done through ssh tunneling using these params
+        ssh: jerome@example.org
+
+        # path to a PHP binary on prod env (example for OVH)
+        php: /usr/local/bin/php.ORIG.5_4
+
+        # if targeting prod, a confirmation will be asked before proceeding
+        protected: true
+
+replacements:
+    
+    # replace only on `option_value` column
+-   include-cols: option_value
+    dev: jerome-dev@example.org
+    prod: jerome-prod@example.org
+    
+    # replace only in `wp_options` table
+-   tables: wp_options
+    dev: dev.example.org
+    prod: prod.example.org

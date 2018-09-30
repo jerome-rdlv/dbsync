@@ -11,46 +11,55 @@ databases between development, pre-production and production environments.
 
 *dbsync* uses a configuration file to  define environments (like dev, prod, preprod, etc.)
 and replacements (different values for different environments).
-Have a look at the `dbsync.json` example config.
+Have a look at the `dbsync.yml` example config. If you put this file in your project directory
+be careful NOT TO add it to the versioning system (it contains passwords).
 
 Use `dbsync --help` to get help.
 
 A typical usage is `dbsync --source dev --target preprod` to synchronize the local `dev` database
-with the remote `preprod` database (moving from `dev` to `preprod` and
+with the remote `preprod` database (moving data from `dev` to `preprod` and
 replacing `dev` values with `preprod` values).
 
 ## config example
 
-```json
-{
-    "tables": "^wp_",
-    "environments": {
-        "dev": {
-            "user": "dev",
-            "pass": "dev",
-            "base": "sync-db-test_dev"
-        },
-        "prod": {
-            "user": "dev",
-            "pass": "dev",
-            "base": "sync-db-test_prod",
-            "ssh": "jerome@example.org",
-            "php": "/usr/local/bin/php.ORIG.5_4"
-        }
-    },
-    "replacements": [
-        {
-            "include-cols": "option_value",
-            "dev": "jerome-dev@example.org",
-            "prod": "jerome-prod@example.org"
-        },
-        {
-            "tables": "wp_options",
-            "dev": "dev.example.org",
-            "prod": "prod.example.org"
-        }
-    ]
-}
+```yml# working only with tables that begin with “wp_”
+tables: ^wp_
+
+environments:
+    dev:
+        user: dev-user
+        pass: dev-pass
+        host: localhost
+        base: sync-db-test_dev
+        port: 3306
+    prod:
+        user: prod-user
+        pass: prod-pass
+        base: sync-db-test_prod
+
+        # db host (often localhost and used with ssh param)
+        host: localhost
+
+        # connection will be done through ssh tunneling using these params
+        ssh: jerome@example.org
+
+        # path to a PHP binary on prod env (example for OVH)
+        php: /usr/local/bin/php.ORIG.5_4
+
+        # if targeting prod, a confirmation will be asked before proceeding
+        protected: true
+
+replacements:
+    
+    # replace only on `option_value` column
+-   include-cols: option_value
+    dev: jerome-dev@example.org
+    prod: jerome-prod@example.org
+    
+    # replace only in `wp_options` table
+-   tables: wp_options
+    dev: dev.example.org
+    prod: prod.example.org
 ```
 
 This example config file define two environments. For the *dev* one, only *user*, *pass*
@@ -64,7 +73,7 @@ example config sync only tables which names begin with `wp_`. It’s possible
 to name tables like this :
 
 ```
-    "tables": "^(wp_post|wp_options|my_table)$"
+"tables": "^(wp_post|wp_options|my_table)$"
 ```
 
 The value of this parameter is given to the PHP function `preg_match`.
@@ -93,7 +102,7 @@ Search-Replace-DB, *srdb*, is sent on the target env for local execution,
 and dropped after replacements are done.
 
 Some Search-Replace-DB command line options are usable: `tables`, `include-cols`,
-`exclude-cols` and `regex`. They must be defined for each replacement (see `dbsync.json`)
+`exclude-cols` and `regex`. They must be defined for each replacement (see `dbsync.yml`)
 using long option name.
 
 ## files
@@ -120,7 +129,7 @@ To backup a database is easy and quick with this tool, so do not hesitate to do 
 before any risky operation.
 
 ```
-    dbsync --source prod --target prod_20170512_1235.sql.gz
+dbsync --source prod --target prod_20170512_1235.sql.gz
 ```
 
 ## Troubleshooting

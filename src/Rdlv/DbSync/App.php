@@ -3,7 +3,7 @@
 namespace Rdlv\DbSync;
 
 use PHPSQLParser\PHPSQLParser;
-use ReflectionClass;
+use Symfony\Component\Yaml\Yaml;
 
 class App
 {
@@ -35,7 +35,7 @@ class App
 
     const MYSQL_DEFAULT_PORT = 0;
 
-    public static $confDefaultFile = 'dbsync.json';
+    public static $confDefaultFile = 'dbsync';
 
     public static function run()
     {
@@ -51,20 +51,7 @@ class App
     // used to mark source env in dump file
     private $marker = '-- sync-db env: ';
 
-    private $opts = array(
-        self::OPT_CONF . ':'        => self::LOPT_CONF . ':',
-        self::OPT_SOURCE . ':'      => self::LOPT_SOURCE . ':',
-        self::OPT_TARGET . ':'      => self::LOPT_TARGET . ':',
-        self::OPT_REPLACEMENTS_ONLY => self::LOPT_REPLACEMENTS_ONLY,
-        self::OPT_NO_REPLACEMENT    => self::LOPT_NO_REPLACEMENT,
-        self::OPT_FIX               => self::LOPT_FIX,
-        self::OPT_INCLUDE . ':'     => self::LOPT_INCLUDE . ':',
-        self::OPT_EXCLUDE . ':'     => self::LOPT_EXCLUDE . ':',
-        self::OPT_HELP              => self::LOPT_HELP,
-        self::OPT_DEBUG             => self::LOPT_DEBUG,
-        self::OPT_VERBOSE           => self::LOPT_VERBOSE,
-        self::OPT_FORCE             => self::LOPT_FORCE,
-    );
+    private $opts;
 
     private $dbrOpts = array(
         't:' => 'tables:',
@@ -113,6 +100,21 @@ class App
     private function __construct()
     {
         global $argv;
+        
+        $this->opts  = array(
+            self::OPT_CONF . ':'        => self::LOPT_CONF . ':',
+            self::OPT_SOURCE . ':'      => self::LOPT_SOURCE . ':',
+            self::OPT_TARGET . ':'      => self::LOPT_TARGET . ':',
+            self::OPT_REPLACEMENTS_ONLY => self::LOPT_REPLACEMENTS_ONLY,
+            self::OPT_NO_REPLACEMENT    => self::LOPT_NO_REPLACEMENT,
+            self::OPT_FIX               => self::LOPT_FIX,
+            self::OPT_INCLUDE . ':'     => self::LOPT_INCLUDE . ':',
+            self::OPT_EXCLUDE . ':'     => self::LOPT_EXCLUDE . ':',
+            self::OPT_HELP              => self::LOPT_HELP,
+            self::OPT_DEBUG             => self::LOPT_DEBUG,
+            self::OPT_VERBOSE           => self::LOPT_VERBOSE,
+            self::OPT_FORCE             => self::LOPT_FORCE,
+        );
 
         $this->script  = basename($argv[0]);
         $this->options = getopt(
@@ -399,18 +401,42 @@ class App
     {
         $confFile = $this->getOpt(self::OPT_CONF);
         if (!$confFile) {
-            $confFile = self::$confDefaultFile;
+            // try default paths
+            foreach (['yml', 'yaml', 'json'] as $ext) {
+                $confFile = self::$confDefaultFile .'.'. $ext;
+                if (file_exists($confFile)) {
+                    break;
+                }
+            }
+            
+            if (!file_exists($confFile)) {
+                $this->error('Can not find config file ' . self::$confDefaultFile .'.yml', true);
+            }
         }
-
-        if (!file_exists($confFile)) {
+        elseif (!file_exists($confFile)) {
             $this->error('Can not find config file ' . $confFile, true);
         }
-
-        $this->config = json_decode(file_get_contents($confFile), true);
-
-        $error = json_last_error();
-        if ($error != JSON_ERROR_NONE) {
-            $this->error('Error reading ' . $confFile, json_last_error_msg());
+        
+        $extension = pathinfo($confFile, PATHINFO_EXTENSION);
+        switch ($extension) {
+            case 'yml':
+            case 'yaml':
+                $this->config = Yaml::parse(file_get_contents($confFile));
+                break;
+            case 'json':
+                if (function_exists('json_decode')) {
+                    $this->config = json_decode(file_get_contents($confFile), true);
+                    $error = json_last_error();
+                    if ($error != JSON_ERROR_NONE) {
+                        $this->error('Error reading ' . $confFile, json_last_error_msg());
+                    }
+                }
+                else {
+                    $this->error('Please install json-ext to parse json config file');
+                }
+                break;
+            default:
+                $this->error('Config file must be in JSON or YAML format');
         }
 
         // loading environments
@@ -878,7 +904,7 @@ class App
             if ($this->getOpt(self::OPT_DEBUG) || $this->getOpt(self::OPT_VERBOSE)) {
                 $this->printCmd($cmd);
             }
-            $output = '';
+            $output = [];
             $result = 0;
             exec($cmd, $output, $result);
             $output = implode(PHP_EOL, $output);
@@ -910,26 +936,10 @@ class App
     }
 
     /**
-     * @return string SRDB script as base64 string for transfert
+     * @return string dbreplace script as base64 string for transfert
      */
     private function getDbrData()
     {
-        $path = realpath(__DIR__ .'/../../../dbreplace.php');
-//        $classPath = (new ReflectionClass('icit_srdb'))->getFileName();
-//        $cliPath = dirname($classPath) . '/srdb.cli.php';
-
-//        $class = file_get_contents($classPath);
-//        $cli = file_get_contents($cliPath);
-        $script = file_get_contents($path);
-
-        // drop require in cli
-//        $regex = '/^require_once.*'. str_replace('.', '\.', 'srdb.class.php') .'.*$/m';
-//        $cli = preg_replace($regex, '// -- inserted at the end of this file --', $cli);
-
-        // drop php open tag
-//        $class = preg_replace('/^\<\?php.*$/m', '', $class);
-//        $out = $cli .PHP_EOL. $class;
-
         return chunk_split(
             base64_encode(
                 file_get_contents(__DIR__ .'/../../../dbreplace.php')
