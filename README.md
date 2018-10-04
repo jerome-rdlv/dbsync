@@ -73,8 +73,8 @@ Tables to sync can be defined with the regex based directive `tables`. The
 example config sync only tables which names begin with `wp_`. It’s possible
 to name tables like this :
 
-```
-"tables": "^(wp_post|wp_options|my_table)$"
+```yaml
+tables: ^(wp_post|wp_options|my_table)$
 ```
 
 The value of this parameter is given to the PHP function `preg_match`.
@@ -82,7 +82,7 @@ The value of this parameter is given to the PHP function `preg_match`.
 ## SSH tunneling
 
 This tool can works with remote database through SSH. Simply define `ssh` entry
-in the choosen environment. If your SSH key is set, no password will be prompted.
+in the chosen environment. If your SSH key is set, no password will be prompted.
 
 The value of the `ssh` directive is the connection string you would use to
 connect your ssh server. In the case of the example config, you could connect
@@ -96,7 +96,7 @@ in env configuration and giving the PHP executable path as value.
 
 ## Search / replace
 
-This tool use [interconnectit/Search-Replace-DB](https://github.com/interconnectit/Search-Replace-DB)
+dbsync use [interconnectit/Search-Replace-DB](https://github.com/interconnectit/Search-Replace-DB)
 for the replacements work.
 
 Search-Replace-DB, *srdb*, is sent on the target env for local execution,
@@ -120,8 +120,8 @@ If the file ends with `.gz` it will be gzipped. It is possible to use a gzipped 
 
 ## Charset fix
 
-You can use the `--fix` option to try a charset repair of your database.It may solve
-issues with double utf8 encoded characters
+You can use the `--fix` option to try a charset repair of your database.
+It may solve issues with double utf8 encoded characters
 using [this technique](http://blog.hno3.org/2010/04/22/fixing-double-encoded-utf-8-data-in-mysql/).
 
 ## Backups
