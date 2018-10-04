@@ -22,7 +22,8 @@ replacing `dev` values with `preprod` values).
 
 ## Config example
 
-```yml# working only with tables that begin with “wp_”
+```yaml
+# working only with tables that begin with “wp_”
 tables: ^wp_
 
 environments:
