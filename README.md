@@ -1,13 +1,13 @@
 # dbsync
 
-A database synchronization command line tool with support for replacements,
+A MySQL migration command line tool with support for replacements,
 GZIP transfers and SSH tunneling. Its written in PHP but it executes bash commands.
 
 I’m publishing this here because it might be useful to others,
 but USE OF THIS SCRIPT IS ENTIRELY AT YOUR OWN RISK. I accept no liability from its use.
 
-That said, I’ve been successfully using this tool for several years to synchronize WordPress
-databases between development, pre-production and production environments.
+That said, I’ve been successfully using this tool for several years to migrate WordPress
+MySQL databases between development, pre-production and production environments.
 
 *dbsync* uses a configuration file to  define environments (like dev, prod, preprod, etc.)
 and replacements (different values for different environments).
@@ -16,8 +16,8 @@ be careful NOT TO add it to the versioning system (it contains passwords).
 
 Use `dbsync --help` to get help.
 
-A typical usage is `dbsync --source dev --target preprod` to synchronize the local `dev` database
-with the remote `preprod` database (moving data from `dev` to `preprod` and
+A typical usage is `dbsync --source dev --target preprod` to migrate the local `dev` database
+to the remote `preprod` database (moving data from `dev` to `preprod` and
 replacing `dev` values with `preprod` values).
 
 ## Config example
@@ -69,9 +69,9 @@ and a specific PHP version (`/usr/local/bin/php.ORIG.5_4`).
 
 ## Tables filtering
 
-Tables to sync can be defined with the regex based directive `tables`. The
-example config sync only tables which names begin with `wp_`. It’s possible
-to name tables like this :
+Tables to migrate can be defined with the regex based directive `tables`. The
+example config migrates only tables which names begin with `wp_`. It’s possible
+to target tables like this :
 
 ```yaml
 tables: ^(wp_post|wp_options|my_table)$
@@ -96,7 +96,7 @@ in env configuration and giving the PHP executable path as value.
 
 ## Search / replace
 
-dbsync use [interconnectit/Search-Replace-DB](https://github.com/interconnectit/Search-Replace-DB)
+*dbsync* use [interconnectit/Search-Replace-DB](https://github.com/interconnectit/Search-Replace-DB)
 for the replacements work.
 
 Search-Replace-DB, *srdb*, is sent on the target env for local execution,
@@ -109,7 +109,7 @@ using long option name.
 ## Files
 
 It is possible to use a file name in place of the environment name, either as source
-or as target. The replacements are done when synchronizing from a file to an environment
+or as target. The replacements are done when the import is from a file to an environment
 (replacements are always done on target database).
 
 To dump a database to a file: `dbsync --source prod --target prod-dump.sql`
