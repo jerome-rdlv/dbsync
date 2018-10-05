@@ -3,7 +3,7 @@
 	"description": "A database synchronization tool with support for replacements and SSH tunneling.",
 	"homepage": "https://github.com/jerome-rdlv/dbsync",
 	"type": "project",
-	"license": "CC-BY-4.0",
+	"license": "MIT",
 	"authors": [
 		{
 			"name": "Jérôme Mulsant",
