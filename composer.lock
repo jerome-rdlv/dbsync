@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "6390422ff363c63f580be8f35679a10e",
+    "content-hash": "74f49edbefd18906bb9863562a284488",
     "packages": [
         {
             "name": "academe/serializeparser",
@@ -54,21 +54,24 @@
         },
         {
             "name": "analog/analog",
-            "version": "1.0.10-stable",
+            "version": "1.0.11-stable",
             "source": {
                 "type": "git",
                 "url": "https://github.com/jbroadway/analog.git",
-                "reference": "65dce6b5aff8c77307c783e607c04a35df8259d6"
+                "reference": "f04906be5a740794959ecceaaae307792cfe3b58"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/jbroadway/analog/zipball/65dce6b5aff8c77307c783e607c04a35df8259d6",
-                "reference": "65dce6b5aff8c77307c783e607c04a35df8259d6",
+                "url": "https://api.github.com/repos/jbroadway/analog/zipball/f04906be5a740794959ecceaaae307792cfe3b58",
+                "reference": "f04906be5a740794959ecceaaae307792cfe3b58",
                 "shasum": ""
             },
             "require": {
                 "php": ">=5.3.2",
                 "psr/log": "1.*"
+            },
+            "require-dev": {
+                "phpunit/phpunit": "^4.8.36 || ^5.7 || ^6.5"
             },
             "type": "library",
             "autoload": {
@@ -99,7 +102,7 @@
                 "logging",
                 "syslog"
             ],
-            "time": "2017-09-17T02:30:30+00:00"
+            "time": "2018-12-08T15:36:38+00:00"
         },
         {
             "name": "greenlion/php-sql-parser",
@@ -158,51 +161,17 @@
             "time": "2017-05-16T21:20:45+00:00"
         },
         {
-            "name": "interconnectit/search-replace-db",
-            "version": "3.1",
-            "source": {
-                "type": "git",
-                "url": "https://github.com/interconnectit/Search-Replace-DB.git",
-                "reference": "28a1f059e4739bca618056dcf3c550a634cf1035"
-            },
-            "dist": {
-                "type": "zip",
-                "url": "https://api.github.com/repos/interconnectit/Search-Replace-DB/zipball/28a1f059e4739bca618056dcf3c550a634cf1035",
-                "reference": "28a1f059e4739bca618056dcf3c550a634cf1035",
-                "shasum": ""
-            },
-            "require": {
-                "php": ">=5.3.0"
-            },
-            "bin": [
-                "srdb.cli.php"
-            ],
-            "type": "library",
-            "autoload": {
-                "files": [
-                    "srdb.class.php"
-                ]
-            },
-            "notification-url": "https://packagist.org/downloads/",
-            "license": [
-                "GPL-3.0"
-            ],
-            "description": "A PHP search replace tool for quickly modifying a string throughout a database. Useful for changing the base URL when migrating a WordPress site from development to production.",
-            "homepage": "https://github.com/interconnectit/Search-Replace-DB",
-            "time": "2015-07-07T15:44:12+00:00"
-        },
-        {
             "name": "psr/log",
-            "version": "1.0.2",
+            "version": "1.1.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/php-fig/log.git",
-                "reference": "4ebe3a8bf773a19edfe0a84b6585ba3d401b724d"
+                "reference": "6c001f1daafa3a3ac1d8ff69ee4db8e799a654dd"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/php-fig/log/zipball/4ebe3a8bf773a19edfe0a84b6585ba3d401b724d",
-                "reference": "4ebe3a8bf773a19edfe0a84b6585ba3d401b724d",
+                "url": "https://api.github.com/repos/php-fig/log/zipball/6c001f1daafa3a3ac1d8ff69ee4db8e799a654dd",
+                "reference": "6c001f1daafa3a3ac1d8ff69ee4db8e799a654dd",
                 "shasum": ""
             },
             "require": {
@@ -236,11 +205,11 @@
                 "psr",
                 "psr-3"
             ],
-            "time": "2016-10-10T12:19:37+00:00"
+            "time": "2018-11-20T15:27:04+00:00"
         },
         {
             "name": "symfony/polyfill-ctype",
-            "version": "v1.9.0",
+            "version": "v1.10.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/symfony/polyfill-ctype.git",
@@ -298,16 +267,16 @@
         },
         {
             "name": "symfony/yaml",
-            "version": "v4.1.6",
+            "version": "v4.2.1",
             "source": {
                 "type": "git",
                 "url": "https://github.com/symfony/yaml.git",
-                "reference": "367e689b2fdc19965be435337b50bc8adf2746c9"
+                "reference": "c41175c801e3edfda90f32e292619d10c27103d7"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/symfony/yaml/zipball/367e689b2fdc19965be435337b50bc8adf2746c9",
-                "reference": "367e689b2fdc19965be435337b50bc8adf2746c9",
+                "url": "https://api.github.com/repos/symfony/yaml/zipball/c41175c801e3edfda90f32e292619d10c27103d7",
+                "reference": "c41175c801e3edfda90f32e292619d10c27103d7",
                 "shasum": ""
             },
             "require": {
@@ -326,7 +295,7 @@
             "type": "library",
             "extra": {
                 "branch-alias": {
-                    "dev-master": "4.1-dev"
+                    "dev-master": "4.2-dev"
                 }
             },
             "autoload": {
@@ -353,7 +322,7 @@
             ],
             "description": "Symfony Yaml Component",
             "homepage": "https://symfony.com",
-            "time": "2018-10-02T16:36:10+00:00"
+            "time": "2018-11-11T19:52:12+00:00"
         }
     ],
     "packages-dev": [],
@@ -365,6 +334,7 @@
     "platform": {
         "php": ">=5.4",
         "ext-json": "*",
+        "ext-readline": "*",
         "ext-zlib": "*"
     },
     "platform-dev": []

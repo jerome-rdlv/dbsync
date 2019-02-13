@@ -210,6 +210,18 @@ class App
             $length = max($length, strlen($out[$env]));
         }
 
+        // tables
+        if ($this->envs['source']['tables']) {
+            $tables = implode(
+                PHP_EOL. str_pad('', $length - 7),
+                $this->envs['source']['tables']
+            );
+            echo str_pad( 'tables:', $length - 9, ' ', STR_PAD_LEFT ) . "  ";
+            echo $this->c($tables, $cData);
+            echo PHP_EOL;
+            echo PHP_EOL;
+        }
+
         // detail
         foreach ($items as $key => $env) {
 
@@ -228,18 +240,6 @@ class App
                     echo $this->c(' ssh:', $cSymbol) . $this->c($config['ssh'], $cData);
                 }
             }
-            echo PHP_EOL;
-        }
-
-        // tables
-        if ($this->envs['source']['tables']) {
-            $tables = implode(
-                PHP_EOL. str_pad('', $length - 7),
-                $this->envs['source']['tables']
-            );
-            echo PHP_EOL;
-            echo str_pad( 'tables:', $length - 9, ' ', STR_PAD_LEFT ) . "  ";
-            echo $this->c($tables, $cData);
             echo PHP_EOL;
         }
 
