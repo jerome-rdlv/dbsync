@@ -75,11 +75,11 @@ class App
     );
 
     private $cmds = array(
-        'test'      => 'echo "use {base};" | mysql -u "{user}" -p"{pass}" -h "{host}" -P {port} "{base}"',
+        'test'      => 'echo "use {base};" | mysql -u "{user}" -p"{pass}" -h "{host}" -P {port} --protocol=TCP "{base}"',
         'gzip_test' => 'gzip -V',
-        'tables'    => 'echo "show tables;" | mysql --skip-column-names -u "{user}" -p"{pass}" -h "{host}" -P {port} "{base}"',
-        'source'    => 'mysqldump {options} -u "{user}" -p"{pass}" --add-drop-table --no-create-db -h "{host}" -P {port} "{base}" {tables} {gzip}',
-        'target'    => '{gzip} mysql {options} -u "{user}" -p"{pass}" -h "{host}" -P {port} "{base}"',
+        'tables'    => 'echo "show tables;" | mysql --skip-column-names -u "{user}" -p"{pass}" -h "{host}" -P {port} --protocol=TCP "{base}"',
+        'source'    => 'mysqldump {options} -u "{user}" -p"{pass}" --add-drop-table --no-create-db -h "{host}" -P {port} --protocol=TCP "{base}" {tables} {gzip}',
+        'target'    => '{gzip} mysql {options} -u "{user}" -p"{pass}" -h "{host}" -P {port} --protocol=TCP "{base}"',
         'markfile'  => '{ echo "{marker}{env}"; cat; } {gzip} > "{file}"',
         'tofile'    => ' cat {gzip} > "{file}"',
         'fromfile'  => ' cat "{file}" {gzip}',
