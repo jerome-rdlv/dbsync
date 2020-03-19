@@ -1,29 +1,29 @@
 # working only with tables that begin with “wp_”
-tables: ^wp_
+tables: ^wp_options
 
 environments:
     dev:
-        user: dev-user
-        pass: dev-pass
+        user: dev
+        pass: dev
         host: localhost
-        base: sync-db-test_dev
+        base: dbsync_test_dev
         port: 3306
     prod:
-        user: prod-user
-        pass: prod-pass
-        base: sync-db-test_prod
+        user: dev
+        pass: dev
+        base: dbsync_test_prod
 
         # db host (often localhost and used with ssh param)
         host: localhost
 
         # connection will be done through ssh tunneling using these params
-        ssh: jerome@example.org
+#        ssh: jerome@example.org
 
         # path to a PHP binary on prod env (example for OVH)
-        php: /usr/local/bin/php.ORIG.5_4
+#        php: /usr/local/bin/php.ORIG.5_4
 
         # if targeting prod, a confirmation will be asked before proceeding
-        protected: true
+#        protected: true
 
 replacements:
     

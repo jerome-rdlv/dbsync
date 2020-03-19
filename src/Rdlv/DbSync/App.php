@@ -12,7 +12,7 @@ class App
     const OPT_TARGET = 't';
     const OPT_REPLACEMENTS_ONLY = 'r';
     const OPT_NO_REPLACEMENT = 'n';
-    const OPT_FIX = 'f';
+    const OPT_FIX = 'm';
     const OPT_INCLUDE = 'i';
     const OPT_EXCLUDE = 'x';
     const OPT_HELP = 'h';

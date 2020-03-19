@@ -1407,7 +1407,6 @@ abstract class Node
     /** @return string */
     abstract public function toString();
 
-    /** @return string|integer */
     abstract public function getContent();
 
     /**
@@ -1631,6 +1630,40 @@ class NodeInt extends Node
     }
 }
 
+class NodeDouble extends Node
+{
+    const FORMAT = 'd:%s;';
+
+    /** @var integer */
+    public $content;
+
+    /** @return string */
+    public function toString()
+    {
+        return sprintf(self::FORMAT, $this->content);
+    }
+    
+    public function getContent()
+    {
+        return (string)$this->content;
+    }
+
+    /**
+     * Replace string in data using callback
+     * @param $callback
+     * @return integer Replacement count
+     */
+    public function replace($callback)
+    {
+        $replaced = $callback($this->content);
+        if ($replaced != $this->content) {
+            $this->content = $replaced;
+            return 1;
+        }
+        return 0;
+    }
+}
+
 class NodeNull extends Node
 {
     const FORMAT = 'N;';
@@ -1769,7 +1802,6 @@ class Parser
                 for ($i = 0; $i < $count; $i++) {
                     $array_key = $this->parse();
                     $array_value = $this->parse();
-//                    $key = $array_key instanceof NodeString ? $array_key
                     $val->content[$array_key->getContent()] = $array_value;
                 }
                 // Eat "}" terminating the array.
@@ -1811,10 +1843,13 @@ class Parser
                 break;
             case 'i':
             case 'r':
-            case 'd':
                 $val = new NodeInt();
                 $val->type = $type;
                 $val->content = (int)$this->readUntil(';');
+                break;
+            case 'd':
+                $val = new NodeDouble();
+                $val->content = (double)$this->readUntil(';');
                 break;
             case 'b':
                 $val = new NodeBoolean();
