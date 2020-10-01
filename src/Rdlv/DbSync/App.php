@@ -47,22 +47,24 @@ class App
     private $dbr = 'dbr_%s.php';
 
     private $defaultPhp = 'php';
+    private $defaultMysql = 'mysql';
+    private $defaultMysqldump = 'mysqldump';
 
     // used to mark source env in dump file
     private $marker = '-- sync-db env: ';
 
     private $opts;
 
-    private $dbrOpts = array(
+    private $dbrOpts = [
         't:' => 'tables:',
         'i:' => 'include-cols:',
         'x:' => 'exclude-cols:',
         'g'  => 'regex',
-    );
+    ];
 
     private $options = null;
 
-    private $colors = array(
+    private $colors = [
         'no'     => '00',
         'grey'   => '37',
         'yellow' => '33',
@@ -72,14 +74,14 @@ class App
         'purple' => '35',
         'ocean'  => '36',
         'dark'   => '30',
-    );
+    ];
 
-    private $cmds = array(
-        'test'      => 'echo "use {base};" | mysql -u "{user}" -p"{pass}" -h "{host}" -P {port} --protocol=TCP "{base}"',
+    private $cmds = [
+        'test'      => 'echo "use {base};" | {mysql} -u "{user}" -p"{pass}" -h "{host}" -P {port} --protocol=TCP "{base}"',
         'gzip_test' => 'gzip -V',
-        'tables'    => 'echo "show tables;" | mysql --skip-column-names -u "{user}" -p"{pass}" -h "{host}" -P {port} --protocol=TCP "{base}"',
-        'source'    => 'mysqldump {options} -u "{user}" -p"{pass}" --add-drop-table --no-create-db -h "{host}" -P {port} --protocol=TCP "{base}" {tables} {gzip}',
-        'target'    => '{gzip} mysql {options} -u "{user}" -p"{pass}" -h "{host}" -P {port} --protocol=TCP "{base}"',
+        'tables'    => 'echo "show tables;" | {mysql} --skip-column-names -u "{user}" -p"{pass}" -h "{host}" -P {port} --protocol=TCP "{base}"',
+        'source'    => '{mysqldump} {options} -u "{user}" -p"{pass}" --add-drop-table --no-create-db -h "{host}" -P {port} --protocol=TCP "{base}" {tables} {gzip}',
+        'target'    => '{gzip} {mysql} {options} -u "{user}" -p"{pass}" -h "{host}" -P {port} --protocol=TCP "{base}"',
         'markfile'  => '{ echo "{marker}{env}"; cat; } {gzip} > "{file}"',
         'tofile'    => ' cat {gzip} > "{file}"',
         'fromfile'  => ' cat "{file}" {gzip}',
@@ -87,9 +89,9 @@ class App
         'ssh_cp'    => 'echo "{data}" | {php} -r "echo base64_decode(stream_get_contents(STDIN));" | ssh {ssh} \'cat > "{dbr}"\'',
         'chmod'     => 'chmod +x {dbr}',
         'rm'        => 'rm {dbr}',
-        'dbr_test' => '{php} -f {dbr} -- -v -n "{base}" -u "{user}" -p"{pass}" -h "{host}" --port {port}',
+        'dbr_test'  => '{php} -f {dbr} -- -v -n "{base}" -u "{user}" -p"{pass}" -h "{host}" --port {port}',
         'replace'   => '{php} -f {dbr} -- -n "{base}" -u "{user}" -p"{pass}" -h "{host}" --port {port} -s"{search}" -r"{replace}" {options}',
-    );
+    ];
 
     private $envs = null;
 
@@ -100,8 +102,8 @@ class App
     private function __construct()
     {
         global $argv;
-        
-        $this->opts  = array(
+
+        $this->opts = [
             self::OPT_CONF . ':'        => self::LOPT_CONF . ':',
             self::OPT_SOURCE . ':'      => self::LOPT_SOURCE . ':',
             self::OPT_TARGET . ':'      => self::LOPT_TARGET . ':',
@@ -114,9 +116,9 @@ class App
             self::OPT_DEBUG             => self::LOPT_DEBUG,
             self::OPT_VERBOSE           => self::LOPT_VERBOSE,
             self::OPT_FORCE             => self::LOPT_FORCE,
-        );
+        ];
 
-        $this->script  = basename($argv[0]);
+        $this->script = basename($argv[0]);
         $this->options = getopt(
             implode('', array_keys($this->opts)),
             array_values($this->opts)
@@ -126,10 +128,10 @@ class App
         $this->dbr = sprintf($this->dbr, uniqid());
 
         // generate ssh cmds
-        $cmds = array();
+        $cmds = [];
         foreach ($this->cmds as $key => &$cmd) {
             if (strpos($key, 'ssh_') === false && !array_key_exists('ssh_' . $key, $this->cmds)) {
-                $cmds[$key]          = $cmd;
+                $cmds[$key] = $cmd;
                 $cmds['ssh_' . $key] = 'ssh {ssh} \'' . str_replace('\'', '\'"\'"\'', $cmd) . '\'';
             } else {
                 $cmds[$key] = $cmd;
@@ -165,7 +167,7 @@ class App
         if ($this->envs['source']['file']) {
             if ($file = gzopen($this->envs['source']['file'], 'r')) {
                 if ($line = gzread($file, 64)) {
-                    if (preg_match('/' . $this->marker . '(.+)($|'. PHP_EOL .')/', $line, $matches)) {
+                    if (preg_match('/' . $this->marker . '(.+)($|' . PHP_EOL . ')/', $line, $matches)) {
                         $this->envs['source']['env'] = $matches[1];
                     }
                 }
@@ -191,11 +193,11 @@ class App
         }
         echo PHP_EOL . PHP_EOL;
 
-        $cData   = 'grey';
+        $cData = 'grey';
         $cSymbol = 'yellow';
 
-        $items = array('from' => 'source', 'to' => 'target');
-        $out   = array();
+        $items = ['from' => 'source', 'to' => 'target'];
+        $out = [];
 
         // label
         $length = 0;
@@ -213,10 +215,10 @@ class App
         // tables
         if ($this->envs['source']['tables']) {
             $tables = implode(
-                PHP_EOL. str_pad('', $length - 7),
+                PHP_EOL . str_pad('', $length - 7),
                 $this->envs['source']['tables']
             );
-            echo str_pad( 'tables:', $length - 9, ' ', STR_PAD_LEFT ) . "  ";
+            echo str_pad('tables:', $length - 9, ' ', STR_PAD_LEFT) . "  ";
             echo $this->c($tables, $cData);
             echo PHP_EOL;
             echo PHP_EOL;
@@ -224,7 +226,6 @@ class App
 
         // detail
         foreach ($items as $key => $env) {
-
             echo str_pad($out[$env], $length + 2, ' ', STR_PAD_LEFT) . "  ";
 
             if ($this->envs[$env]['file']) {
@@ -246,14 +247,14 @@ class App
         if ($this->envs['target']['protected'] === true) {
             $token = strtoupper(substr(sha1(rand()), 0, 4));
             $answer = readline(
-                $this->c(PHP_EOL ."Target env ". $this->envs['target']['env'] ." is protected!". PHP_EOL ."Type ", 'red') .
+                $this->c(PHP_EOL . "Target env " . $this->envs['target']['env'] . " is protected!" . PHP_EOL . "Type ",
+                         'red') .
                 $this->c($token, 'red', true) .
                 $this->c(" to proceed anyway: ", 'red')
             );
             return $answer === $token;
-        }
-        else {
-            $answer = readline(PHP_EOL ."Do you confirm? (yo/N) ");
+        } else {
+            $answer = readline(PHP_EOL . "Do you confirm? (yo/N) ");
             return preg_match('/[yo]/', $answer);
         }
     }
@@ -269,7 +270,7 @@ class App
             // option with value
             if ($key . ':' == $long || $key . ':' == $short) {
                 $short = str_replace(':', '', $short);
-                $long  = str_replace(':', '', $long);
+                $long = str_replace(':', '', $long);
                 if (array_key_exists($long, $this->options)) {
                     return $this->options[$long];
                 } elseif (array_key_exists($short, $this->options)) {
@@ -304,7 +305,6 @@ class App
 
         // gzip may be useful for db transfert only
         if (!$this->getOpt(self::OPT_REPLACEMENTS_ONLY)) {
-
             // gzip is useful if one of the end (at least) is remote
             foreach ($this->envs as $env => $config) {
                 if ($config['ssh']) {
@@ -321,7 +321,6 @@ class App
             // don’t need to test source if only doing replacements on target
             if ($env !== 'source' || !$this->getOpt(self::OPT_REPLACEMENTS_ONLY)) {
                 if ($config['file']) {
-
                     // check file
                     if ($env == 'source') {
                         $this->checkSourceFile($config);
@@ -329,15 +328,15 @@ class App
                         $this->checkTargetFile($config);
                     }
                 } else {
-
                     // check connection
-                    $result = $this->exec($this->getCmd('test', $config['ssh'], array(
-                        'base' => $config['base'],
-                        'user' => $config['user'],
-                        'pass' => $config['pass'],
-                        'host' => $config['host'],
-                        'port' => $config['port'],
-                    )), $output, true);
+                    $result = $this->exec($this->getCmd('test', $config['ssh'], [
+                        'base'  => $config['base'],
+                        'user'  => $config['user'],
+                        'pass'  => $config['pass'],
+                        'host'  => $config['host'],
+                        'port'  => $config['port'],
+                        'mysql' => $config['mysql'],
+                    ]), $output, true);
                     if ($result !== 0) {
                         $this->error('Connection error for ' . $config['env'] . ' environment.', $result);
                     }
@@ -359,7 +358,7 @@ class App
     private function getEnvList()
     {
         // generate environments list
-        $list     = "Available environments: ";
+        $list = "Available environments: ";
         $envNames = array_keys($this->config['environments']);
         array_walk($envNames, function (&$item) {
             $item = $this->c($item, 'yellow');
@@ -383,7 +382,7 @@ class App
     private function checkTargetFile($target)
     {
         $file = $target['file'];
-        $dir  = dirname($file);
+        $dir = dirname($file);
         if (file_exists($file)) {
             if (!is_writable($file)) {
                 $this->error("Target file is not writable");
@@ -403,20 +402,19 @@ class App
         if (!$confFile) {
             // try default paths
             foreach (['yml', 'yaml', 'json'] as $ext) {
-                $confFile = self::$confDefaultFile .'.'. $ext;
+                $confFile = self::$confDefaultFile . '.' . $ext;
                 if (file_exists($confFile)) {
                     break;
                 }
             }
-            
+
             if (!file_exists($confFile)) {
-                $this->error('Can not find config file ' . self::$confDefaultFile .'.yml', true);
+                $this->error('Can not find config file ' . self::$confDefaultFile . '.yml', true);
             }
-        }
-        elseif (!file_exists($confFile)) {
+        } elseif (!file_exists($confFile)) {
             $this->error('Can not find config file ' . $confFile, true);
         }
-        
+
         $extension = pathinfo($confFile, PATHINFO_EXTENSION);
         switch ($extension) {
             case 'yml':
@@ -430,8 +428,7 @@ class App
                     if ($error != JSON_ERROR_NONE) {
                         $this->error('Error reading ' . $confFile, json_last_error_msg());
                     }
-                }
-                else {
+                } else {
                     $this->error('Please install json-ext to parse json config file');
                 }
                 break;
@@ -454,22 +451,24 @@ class App
             $this->error('Missing target environment or output file', $envList, true);
         }
 
-        $this->envs = array();
-        foreach (array('source', 'target') as $env) {
-            $val              = $this->getOpt($env);
-            $this->envs[$env] = array(
-                'env' => false,
-                'user' => false,
-                'pass' => false,
-                'base' => false,
-                'host' => 'localhost',
-                'port' => self::MYSQL_DEFAULT_PORT,
-                'ssh' => false,
-                'file' => false,
-                'php' => $this->defaultPhp,
+        $this->envs = [];
+        foreach (['source', 'target'] as $env) {
+            $val = $this->getOpt($env);
+            $this->envs[$env] = [
+                'env'       => false,
+                'user'      => false,
+                'pass'      => false,
+                'base'      => false,
+                'host'      => 'localhost',
+                'port'      => self::MYSQL_DEFAULT_PORT,
+                'ssh'       => false,
+                'file'      => false,
+                'php'       => $this->defaultPhp,
+                'mysql'     => $this->defaultMysql,
+                'mysqldump' => $this->defaultMysqldump,
                 'protected' => false,
-                'gzip' => false,
-            );
+                'gzip'      => false,
+            ];
             if (!$val) {
                 $this->error("Please give the $env option", $envList);
             } elseif (!array_key_exists($val, $this->config['environments'])) {
@@ -480,17 +479,17 @@ class App
                     $this->envs[$env]['gzip'] = true;
                 }
             } else {
-                $this->envs[$env]        = array_merge($this->envs[$env], $this->config['environments'][$val]);
+                $this->envs[$env] = array_merge($this->envs[$env], $this->config['environments'][$val]);
                 $this->envs[$env]['env'] = $val;
             }
         }
 
         if (array_key_exists('replacements', $this->config)) {
             foreach ($this->config['replacements'] as $replacement) {
-                foreach (array('source', 'target') as $env) {
+                foreach (['source', 'target'] as $env) {
                     if ($this->envs[$env]['env'] && array_key_exists($this->envs[$env]['env'], $replacement)) {
                         if (empty($replacement[$this->envs[$env]['env']])) {
-                            $this->error("Replacement value can not be empty for env ". $this->envs[$env]['env']);
+                            $this->error("Replacement value can not be empty for env " . $this->envs[$env]['env']);
                         }
                     }
                 }
@@ -521,32 +520,32 @@ class App
 
     private function help()
     {
-        echo "Usage : " . $this->script . " [-c config_file] -s source -t target". PHP_EOL;
-        echo "    -". self::OPT_CONF .", --". self::LOPT_CONF . PHP_EOL;
-        echo "      Configuration file to read. Defaults to " . self::$confDefaultFile . ".". PHP_EOL;
-        echo "    -". self::OPT_SOURCE .", --". self::LOPT_SOURCE . PHP_EOL;
-        echo "      Source environment name or file path". PHP_EOL;
-        echo "    -". self::OPT_TARGET .", --". self::LOPT_TARGET . PHP_EOL;
-        echo "      Target environment name or file path.". PHP_EOL;
-        echo "    -". self::OPT_REPLACEMENTS_ONLY .", --". self::LOPT_REPLACEMENTS_ONLY . PHP_EOL;
-        echo "      No database transfert, replacements on target only.". PHP_EOL;
-        echo "    -". self::OPT_NO_REPLACEMENT .", --". self::LOPT_NO_REPLACEMENT . PHP_EOL;
-        echo "      Do not execute replacements, database transfert only.". PHP_EOL;
-        echo "    -". self::OPT_FIX.", --". self::LOPT_FIX ."". PHP_EOL;
-        echo "      Try to fix database charset problems like double utf8 encoded strings.". PHP_EOL;
-        echo "    -". self::OPT_INCLUDE .", --". self::LOPT_INCLUDE ."". PHP_EOL;
-        echo "      Include only given tables in sync. This option may be used multiple times.". PHP_EOL;
-        echo "    -". self::OPT_EXCLUDE .", --". self::LOPT_EXCLUDE . PHP_EOL;
-        echo "      Exclude tables from sync. This option may be used multiple times.". PHP_EOL;
-        echo "    -". self::OPT_DEBUG .", --". self::LOPT_DEBUG . PHP_EOL;
-        echo "      Debug mode, print all commands. No shell_exec execution except for". PHP_EOL;
-        echo "      config tests (connection to distant database, and tables listing).". PHP_EOL;
-        echo "    -". self::OPT_VERBOSE .", --". self::LOPT_VERBOSE . PHP_EOL;
-        echo "      Verbose mode, print all executed commands.". PHP_EOL;
-        echo "    -". self::OPT_FORCE .", --". self::LOPT_FORCE . PHP_EOL;
-        echo "      Do not prompt for confirmation.". PHP_EOL;
-        echo "    -". self::OPT_HELP .", --". self::LOPT_HELP . PHP_EOL;
-        echo "      Display this help.". PHP_EOL;
+        echo "Usage : " . $this->script . " [-c config_file] -s source -t target" . PHP_EOL;
+        echo "    -" . self::OPT_CONF . ", --" . self::LOPT_CONF . PHP_EOL;
+        echo "      Configuration file to read. Defaults to " . self::$confDefaultFile . "." . PHP_EOL;
+        echo "    -" . self::OPT_SOURCE . ", --" . self::LOPT_SOURCE . PHP_EOL;
+        echo "      Source environment name or file path" . PHP_EOL;
+        echo "    -" . self::OPT_TARGET . ", --" . self::LOPT_TARGET . PHP_EOL;
+        echo "      Target environment name or file path." . PHP_EOL;
+        echo "    -" . self::OPT_REPLACEMENTS_ONLY . ", --" . self::LOPT_REPLACEMENTS_ONLY . PHP_EOL;
+        echo "      No database transfert, replacements on target only." . PHP_EOL;
+        echo "    -" . self::OPT_NO_REPLACEMENT . ", --" . self::LOPT_NO_REPLACEMENT . PHP_EOL;
+        echo "      Do not execute replacements, database transfert only." . PHP_EOL;
+        echo "    -" . self::OPT_FIX . ", --" . self::LOPT_FIX . "" . PHP_EOL;
+        echo "      Try to fix database charset problems like double utf8 encoded strings." . PHP_EOL;
+        echo "    -" . self::OPT_INCLUDE . ", --" . self::LOPT_INCLUDE . "" . PHP_EOL;
+        echo "      Include only given tables in sync. This option may be used multiple times." . PHP_EOL;
+        echo "    -" . self::OPT_EXCLUDE . ", --" . self::LOPT_EXCLUDE . PHP_EOL;
+        echo "      Exclude tables from sync. This option may be used multiple times." . PHP_EOL;
+        echo "    -" . self::OPT_DEBUG . ", --" . self::LOPT_DEBUG . PHP_EOL;
+        echo "      Debug mode, print all commands. No shell_exec execution except for" . PHP_EOL;
+        echo "      config tests (connection to distant database, and tables listing)." . PHP_EOL;
+        echo "    -" . self::OPT_VERBOSE . ", --" . self::LOPT_VERBOSE . PHP_EOL;
+        echo "      Verbose mode, print all executed commands." . PHP_EOL;
+        echo "    -" . self::OPT_FORCE . ", --" . self::LOPT_FORCE . PHP_EOL;
+        echo "      Do not prompt for confirmation." . PHP_EOL;
+        echo "    -" . self::OPT_HELP . ", --" . self::LOPT_HELP . PHP_EOL;
+        echo "      Display this help." . PHP_EOL;
         exit;
     }
 
@@ -579,7 +578,7 @@ class App
      * @param $format
      * @param $vars
      */
-    private function nvsprintf($format, $vars = array(), $regex = '/{([^{}]*?)}/')
+    private function nvsprintf($format, $vars = [], $regex = '/{([^{}]*?)}/')
     {
         return preg_replace_callback($regex, function ($matches) use ($vars) {
             if (array_key_exists($matches[1], $vars)) {
@@ -600,32 +599,31 @@ class App
         $source = $this->envs['source'];
         if ($source['file']) {
             $tables = $this->loadTablesFromFile($source['file']);
-        }
-        else {
-            $this->exec($this->getCmd('tables', $source['ssh'], array(
-                'user' => $source['user'],
-                'pass' => $source['pass'],
-                'base' => $source['base'],
-                'host' => $source['host'],
-                'port' => $source['port'],
-            )), $output, true);
+        } else {
+            $this->exec($this->getCmd('tables', $source['ssh'], [
+                'user'  => $source['user'],
+                'pass'  => $source['pass'],
+                'base'  => $source['base'],
+                'host'  => $source['host'],
+                'port'  => $source['port'],
+                'mysql' => $source['mysql'],
+            ]), $output, true);
             $tables = explode(PHP_EOL, $output);
         }
 
         if ($filter || $include || $exclude) {
-
             // filtering
             if ($filter) {
                 $tables = array_filter($tables, function ($table) use ($filter) {
-                    return preg_match('/'. addslashes($filter) .'/', $table);
+                    return preg_match('/' . addslashes($filter) . '/', $table);
                 });
             }
 
-            $available = "Available tables are:". PHP_EOL ." - " . implode(PHP_EOL. " - ", $tables);
+            $available = "Available tables are:" . PHP_EOL . " - " . implode(PHP_EOL . " - ", $tables);
 
             if ($include) {
                 if (!is_array($include)) {
-                    $include = array($include);
+                    $include = [$include];
                 }
                 // just checking if all included tables exist
                 foreach ($include as $table) {
@@ -638,7 +636,7 @@ class App
 
             if ($exclude) {
                 if (!is_array($exclude)) {
-                    $exclude = array($exclude);
+                    $exclude = [$exclude];
                 }
                 foreach ($exclude as $table) {
                     $offset = array_search($table, $tables);
@@ -668,8 +666,8 @@ class App
 
     private function loadTablesFromFile($file)
     {
-        $tables = array();
-        preg_match_all('/^CREATE TABLE.*?;/ims', $this->getFileContents($file), $matches,  PREG_SET_ORDER);
+        $tables = [];
+        preg_match_all('/^CREATE TABLE.*?;/ims', $this->getFileContents($file), $matches, PREG_SET_ORDER);
 
         if ($matches) {
             $parser = new PHPSQLParser();
@@ -720,51 +718,52 @@ class App
             } elseif ($source['gzip']) {
                 $gzip = ' | gzip -d ';
             }
-            $sourceCmd = $this->nvsprintf($this->cmds['fromfile'], array(
+            $sourceCmd = $this->nvsprintf($this->cmds['fromfile'], [
                 'file' => $source['file'],
                 'gzip' => $gzip,
-            ));
+            ]);
         } else {
             // mysql source
-            $sourceCmd = $this->getCmd('source', $source['ssh'], array(
-                'user' => $source['user'],
-                'pass' => $source['pass'],
-                'base' => $source['base'],
-                'host' => $source['host'],
-                'port' => $source['port'],
-                'options' => $this->getOpt(self::OPT_FIX) ? '--skip-set-charset --default-character-set=latin1' : '',
-                'tables' => implode(' ', $source['tables']),
-                'gzip' => $this->gzip ? ' | gzip -9 ' : '',
-            ));
+            $sourceCmd = $this->getCmd('source', $source['ssh'], [
+                'user'      => $source['user'],
+                'pass'      => $source['pass'],
+                'base'      => $source['base'],
+                'host'      => $source['host'],
+                'port'      => $source['port'],
+                'mysqldump' => $source['mysqldump'],
+                'options'   => $this->getOpt(self::OPT_FIX) ? '--skip-set-charset --default-character-set=latin1' : '',
+                'tables'    => implode(' ', $source['tables']),
+                'gzip'      => $this->gzip ? ' | gzip -9 ' : '',
+            ]);
         }
 
         // target
         if ($target['file']) {
             // file target
             $cmd = $source['env'] ? 'markfile' : 'tofile';
-            $targetCmd = $this->nvsprintf($this->cmds[$cmd], array(
+            $targetCmd = $this->nvsprintf($this->cmds[$cmd], [
                 'marker' => $this->marker,
-                'env' => $source['env'],
-                'file' => $target['file'],
-                'gzip' => $target['gzip'] ? ' | gzip -9 ' : '',
-            ));
+                'env'    => $source['env'],
+                'file'   => $target['file'],
+                'gzip'   => $target['gzip'] ? ' | gzip -9 ' : '',
+            ]);
 
             // if source is gzip, gunzip before write
             if ($this->gzip) {
                 $targetCmd = ' gzip -d | ' . $targetCmd;
             }
-
         } else {
             // mysql target
-            $targetCmd = $this->getCmd('target', $target['ssh'], array(
-                'user' => $target['user'],
-                'pass' => $target['pass'],
-                'base' => $target['base'],
-                'host' => $target['host'],
-                'port' => $target['port'],
+            $targetCmd = $this->getCmd('target', $target['ssh'], [
+                'user'    => $target['user'],
+                'pass'    => $target['pass'],
+                'base'    => $target['base'],
+                'host'    => $target['host'],
+                'port'    => $target['port'],
+                'mysql'   => $target['mysql'],
                 'options' => $this->getOpt(self::OPT_FIX) ? '--default-character-set=utf8' : '',
-                'gzip' => $this->gzip ? 'gzip -d | ' : '',
-            ));
+                'gzip'    => $this->gzip ? 'gzip -d | ' : '',
+            ]);
         }
         $result = $this->exec($sourceCmd . ' | ' . $targetCmd, $output);
         if ($result !== 0) {
@@ -779,38 +778,38 @@ class App
         $this->doing('replacements in database...');
 
         // copy dbr to tmp
-        $this->exec($this->getCmd('cp', $target['ssh'], array(
+        $this->exec($this->getCmd('cp', $target['ssh'], [
             'data' => $this->getDbrData(),
-            'dbr' => $this->dbr,
-            'php' => $this->defaultPhp
-        )));
+            'dbr'  => $this->dbr,
+            'php'  => $this->defaultPhp,
+        ]));
 
         // chmod +x
 //            $this->exec($this->getCmd('chmod', $target['ssh'], array(
 //                'dbr' => $this->dbr,
 //            )));
 
-        $replaceCmd = $this->getCmd('replace', $target['ssh'], array(
-            'dbr' => $this->dbr,
+        $replaceCmd = $this->getCmd('replace', $target['ssh'], [
+            'dbr'  => $this->dbr,
             'base' => $target['base'],
             'user' => $target['user'],
             'pass' => $target['pass'],
             'host' => $target['host'],
             'port' => $target['port'],
-            'php' => $target['php'],
-        ));
+            'php'  => $target['php'],
+        ]);
 
         // pre-replacement test
         $output = '';
-        $result = $this->exec($this->getCmd('dbr_test', $target['ssh'], array(
-            'dbr' => $this->dbr,
+        $result = $this->exec($this->getCmd('dbr_test', $target['ssh'], [
+            'dbr'  => $this->dbr,
             'base' => $target['base'],
             'user' => $target['user'],
             'pass' => $target['pass'],
             'host' => $target['host'],
             'port' => $target['port'],
-            'php' => $target['php']
-        )), $output);
+            'php'  => $target['php'],
+        ]), $output);
 
         if ($result !== 0) {
             $this->removeDbr($target);
@@ -833,26 +832,26 @@ class App
             $options = [];
 
             // limit replacement on source table names by default
-            $options['tables'] = '--tables "'. implode(',', $source['tables']) .'"';
+            $options['tables'] = '--tables "' . implode(',', $source['tables']) . '"';
 
             foreach ($this->dbrOpts as $short => $long) {
                 $optName = str_replace(':', '', $long);
                 if (array_key_exists($optName, $replacement)) {
-                    $options[$optName] = '--'. $optName;
+                    $options[$optName] = '--' . $optName;
 
                     // if option require a value
                     if ($optName != $long) {
-                        $options[$optName] .= ' "'. $replacement[$optName] .'"';
+                        $options[$optName] .= ' "' . $replacement[$optName] . '"';
                     }
                 }
             }
 
             $output = '';
-            $result = $this->exec($this->nvsprintf($replaceCmd, array(
-                'search' => $replacement[$source['env']],
+            $result = $this->exec($this->nvsprintf($replaceCmd, [
+                'search'  => $replacement[$source['env']],
                 'replace' => $replacement[$target['env']],
-                'options' => implode(' ', $options)
-            )), $output);
+                'options' => implode(' ', $options),
+            ]), $output);
 
             if ($result !== 0) {
                 $errors .= $output . PHP_EOL;
@@ -876,13 +875,13 @@ class App
 
     private function removeDbr($target)
     {
-        $this->exec($this->getCmd('rm', $target['ssh'], array(
+        $this->exec($this->getCmd('rm', $target['ssh'], [
             'dbr' => $this->dbr,
-            'ssh' => $target['ssh']
-        )));
+            'ssh' => $target['ssh'],
+        ]));
     }
 
-    private function getCmd($cmd, $ssh, $data = array())
+    private function getCmd($cmd, $ssh, $data = [])
     {
         if (!array_key_exists('ssh', $data)) {
             $data['ssh'] = $ssh;
@@ -942,7 +941,7 @@ class App
     {
         return chunk_split(
             base64_encode(
-                file_get_contents(__DIR__ .'/../../../dbreplace.php')
+                file_get_contents(__DIR__ . '/../../../dbreplace.php')
             )
         );
     }
