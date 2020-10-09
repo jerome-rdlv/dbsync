@@ -1259,8 +1259,11 @@ class icit_srdb
 
             foreach ($searches as $key => $search) {
                 $parts = mb_split(preg_quote($search), $subject);
-                $count += count($parts) - 1;
-                $subject = implode($replacements[$key], $parts);
+                // If mb_split fails for any reason, let subject unchanged
+                if ($parts !== false) {
+                    $count += count($parts) - 1;
+                    $subject = implode($replacements[$key], $parts);
+                }
             }
         } else {
             // Call mb_str_replace for each subject in array, recursively

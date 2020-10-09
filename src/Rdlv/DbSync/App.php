@@ -5,6 +5,11 @@ namespace Rdlv\DbSync;
 use PHPSQLParser\PHPSQLParser;
 use Symfony\Component\Yaml\Yaml;
 
+/**
+ * todo Replace dbreplace.php with a new search-replacement feature on SQL stream.
+ *  Use https://github.com/phpmyadmin/sql-parser (but don’t know if it can work on a stream
+ *  nor with high volume dumps > 100MB)
+ */
 class App
 {
     const OPT_CONF = 'c';

@@ -16,10 +16,10 @@
 		"ext-json": "*",
 		"ext-readline": "*",
 		"ext-zlib": "*",
-		"greenlion/PHP-SQL-Parser": "^4.1.2",
-		"academe/SerializeParser": "^1.0",
+		"ext-mbstring": "*",
+		"greenlion/php-sql-parser": "^4.1.2",
 		"symfony/yaml": "^4.1"
-	},
+    },
 	"autoload": {
 		"psr-0": {"Rdlv": "src/"}
 	},
