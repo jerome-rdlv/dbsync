@@ -64,38 +64,38 @@ class App
         't:' => 'tables:',
         'i:' => 'include-cols:',
         'x:' => 'exclude-cols:',
-        'g'  => 'regex',
+        'g' => 'regex',
     ];
 
     private $options = null;
 
     private $colors = [
-        'no'     => '00',
-        'grey'   => '37',
+        'no' => '00',
+        'grey' => '37',
         'yellow' => '33',
-        'red'    => '31',
-        'green'  => '32',
-        'blue'   => '34',
+        'red' => '31',
+        'green' => '32',
+        'blue' => '34',
         'purple' => '35',
-        'ocean'  => '36',
-        'dark'   => '30',
+        'ocean' => '36',
+        'dark' => '30',
     ];
 
     private $cmds = [
-        'test'      => 'echo "use {base};" | {mysql} -u "{user}" -p"{pass}" -h "{host}" -P {port} --protocol=TCP "{base}"',
+        'test' => 'printf "use {:base};" | {:mysql} -u {:user} -p{:pass} -h {:host} -P {:port} --protocol=TCP {:base}',
         'gzip_test' => 'gzip -V',
-        'tables'    => 'echo "show tables;" | {mysql} --skip-column-names -u "{user}" -p"{pass}" -h "{host}" -P {port} --protocol=TCP "{base}"',
-        'source'    => '{mysqldump} {options} -u "{user}" -p"{pass}" --add-drop-table --no-create-db -h "{host}" -P {port} --protocol=TCP "{base}" {tables} {gzip}',
-        'target'    => '{gzip} {mysql} {options} -u "{user}" -p"{pass}" -h "{host}" -P {port} --protocol=TCP "{base}"',
-        'markfile'  => '{ echo "{marker}{env}"; cat; } {gzip} > "{file}"',
-        'tofile'    => ' cat {gzip} > "{file}"',
-        'fromfile'  => ' cat "{file}" {gzip}',
-        'cp'        => 'echo "{data}" | {php} -r "echo base64_decode(stream_get_contents(STDIN));" > {dbr}',
-        'ssh_cp'    => 'echo "{data}" | {php} -r "echo base64_decode(stream_get_contents(STDIN));" | ssh {ssh} \'cat > "{dbr}"\'',
-        'chmod'     => 'chmod +x {dbr}',
-        'rm'        => 'rm {dbr}',
-        'dbr_test'  => '{php} -f {dbr} -- -v -n "{base}" -u "{user}" -p"{pass}" -h "{host}" --port {port}',
-        'replace'   => '{php} -f {dbr} -- -n "{base}" -u "{user}" -p"{pass}" -h "{host}" --port {port} -s"{search}" -r"{replace}" {options}',
+        'tables' => '{:mysql} --skip-column-names -u {:user} -p{:pass} -h {:host} -P {:port} --protocol=TCP {:base} -e "show tables;"',
+        'source' => '{:mysqldump} {options} -u {:user} -p{:pass} --add-drop-table --no-create-db --no-tablespaces -h {:host} -P {:port} --protocol=TCP {:base} {:tables} {gzip}',
+        'target' => '{gzip} {:mysql} {options} -u {:user} -p{:pass} -h {:host} -P {:port} --protocol=TCP {:base}',
+        'markfile' => '{ echo {:mark}; cat; } {gzip} > {:file}',
+        'tofile' => ' cat {gzip} > {:file}',
+        'fromfile' => 'cat {:file} {gzip}',
+        'cp' => 'printf {:data} | {:php} -r "echo base64_decode(stream_get_contents(STDIN));" > {:dbr}',
+        'ssh_cp' => 'printf {:data} | {:php} -r "echo base64_decode(stream_get_contents(STDIN));" | ssh {ssh} \'cat > {:dbr}\'',
+        'chmod' => 'chmod +x {:dbr}',
+        'rm' => 'rm {:dbr}',
+        'dbr_test' => '{:php} -f {:dbr} -- -v -n {:base} -u {:user} -p{:pass} -h {:host} --port {:port}',
+        'replace' => '{:php} -f {:dbr} -- -n {:base} -u {:user} -p{:pass} -h {:host} --port {:port} -s{:search} -r{:replace} {options}',
     ];
 
     private $envs = null;
@@ -109,18 +109,18 @@ class App
         global $argv;
 
         $this->opts = [
-            self::OPT_CONF . ':'        => self::LOPT_CONF . ':',
-            self::OPT_SOURCE . ':'      => self::LOPT_SOURCE . ':',
-            self::OPT_TARGET . ':'      => self::LOPT_TARGET . ':',
+            self::OPT_CONF . ':' => self::LOPT_CONF . ':',
+            self::OPT_SOURCE . ':' => self::LOPT_SOURCE . ':',
+            self::OPT_TARGET . ':' => self::LOPT_TARGET . ':',
             self::OPT_REPLACEMENTS_ONLY => self::LOPT_REPLACEMENTS_ONLY,
-            self::OPT_NO_REPLACEMENT    => self::LOPT_NO_REPLACEMENT,
-            self::OPT_FIX               => self::LOPT_FIX,
-            self::OPT_INCLUDE . ':'     => self::LOPT_INCLUDE . ':',
-            self::OPT_EXCLUDE . ':'     => self::LOPT_EXCLUDE . ':',
-            self::OPT_HELP              => self::LOPT_HELP,
-            self::OPT_DEBUG             => self::LOPT_DEBUG,
-            self::OPT_VERBOSE           => self::LOPT_VERBOSE,
-            self::OPT_FORCE             => self::LOPT_FORCE,
+            self::OPT_NO_REPLACEMENT => self::LOPT_NO_REPLACEMENT,
+            self::OPT_FIX => self::LOPT_FIX,
+            self::OPT_INCLUDE . ':' => self::LOPT_INCLUDE . ':',
+            self::OPT_EXCLUDE . ':' => self::LOPT_EXCLUDE . ':',
+            self::OPT_HELP => self::LOPT_HELP,
+            self::OPT_DEBUG => self::LOPT_DEBUG,
+            self::OPT_VERBOSE => self::LOPT_VERBOSE,
+            self::OPT_FORCE => self::LOPT_FORCE,
         ];
 
         $this->script = basename($argv[0]);
@@ -133,17 +133,18 @@ class App
         $this->dbr = sprintf($this->dbr, uniqid());
 
         // generate ssh cmds
-        $cmds = [];
-        foreach ($this->cmds as $key => &$cmd) {
-            if (strpos($key, 'ssh_') === false && !array_key_exists('ssh_' . $key, $this->cmds)) {
-                $cmds[$key] = $cmd;
-                $cmds['ssh_' . $key] = 'ssh {ssh} \'' . str_replace('\'', '\'"\'"\'', $cmd) . '\'';
-            } else {
-                $cmds[$key] = $cmd;
-            }
-        }
-
-        $this->cmds = $cmds;
+//        $cmds = [];
+//        foreach ($this->cmds as $key => &$cmd) {
+//            if (strpos($key, 'ssh_') === false && !array_key_exists('ssh_' . $key, $this->cmds)) {
+//                $cmds[$key] = $cmd;
+//                #$cmds['ssh_' . $key] = 'ssh {ssh} \'' . str_replace('\'', '\'"\'"\'', $cmd) . '\'';
+//                $cmds['ssh_' . $key] = 'ssh {ssh} \'' . escapeshellcmd($cmd) . '\'';
+//            } else {
+//                $cmds[$key] = $cmd;
+//            }
+//        }
+//
+//        $this->cmds = $cmds;
 
         // path
         $this->exec('pwd', $this->path);
@@ -335,13 +336,13 @@ class App
                 } else {
                     // check connection
                     $result = $this->exec($this->getCmd('test', $config['ssh'], [
-                        'base'  => $config['base'],
-                        'user'  => $config['user'],
-                        'pass'  => $config['pass'],
-                        'host'  => $config['host'],
-                        'port'  => $config['port'],
+                        'base' => $config['base'],
+                        'user' => $config['user'],
+                        'pass' => $config['pass'],
+                        'host' => $config['host'],
+                        'port' => $config['port'],
                         'mysql' => $config['mysql'],
-                    ]), $output, true);
+                    ]),                   $output, true);
                     if ($result !== 0) {
                         $this->error('Connection error for ' . $config['env'] . ' environment.', $result);
                     }
@@ -460,19 +461,19 @@ class App
         foreach (['source', 'target'] as $env) {
             $val = $this->getOpt($env);
             $this->envs[$env] = [
-                'env'       => false,
-                'user'      => false,
-                'pass'      => false,
-                'base'      => false,
-                'host'      => 'localhost',
-                'port'      => self::MYSQL_DEFAULT_PORT,
-                'ssh'       => false,
-                'file'      => false,
-                'php'       => $this->defaultPhp,
-                'mysql'     => $this->defaultMysql,
+                'env' => false,
+                'user' => false,
+                'pass' => false,
+                'base' => false,
+                'host' => 'localhost',
+                'port' => self::MYSQL_DEFAULT_PORT,
+                'ssh' => false,
+                'file' => false,
+                'php' => $this->defaultPhp,
+                'mysql' => $this->defaultMysql,
                 'mysqldump' => $this->defaultMysqldump,
                 'protected' => false,
-                'gzip'      => false,
+                'gzip' => false,
             ];
             if (!$val) {
                 $this->error("Please give the $env option", $envList);
@@ -583,15 +584,29 @@ class App
      * @param $format
      * @param $vars
      */
-    private function nvsprintf($format, $vars = [], $regex = '/{([^{}]*?)}/')
+    private function buildCommand($format, $vars = [], $regex = '/{([^{}]*?)}/')
     {
         return preg_replace_callback($regex, function ($matches) use ($vars) {
-            if (array_key_exists($matches[1], $vars)) {
-                return $vars[$matches[1]];
+            $name = preg_replace('/^:/', '', $matches[1]);
+            if (array_key_exists($name, $vars)) {
+                return substr($matches[1], 0, 1) === ':'
+                    ? $this->escape($vars[$name])
+                    : $vars[$name];
             } else {
                 return $matches[0];
             }
-        }, $format);
+        },                           $format);
+    }
+
+    private function escape($value) 
+    {
+        if (is_array($value)) {
+            return implode(' ', array_map(function ($item) {
+                return $this->escape($item);
+            }, $value));
+        } else {
+            return escapeshellarg((string)$value);
+        }
     }
 
     private function getTables()
@@ -606,13 +621,13 @@ class App
             $tables = $this->loadTablesFromFile($source['file']);
         } else {
             $this->exec($this->getCmd('tables', $source['ssh'], [
-                'user'  => $source['user'],
-                'pass'  => $source['pass'],
-                'base'  => $source['base'],
-                'host'  => $source['host'],
-                'port'  => $source['port'],
+                'user' => $source['user'],
+                'pass' => $source['pass'],
+                'base' => $source['base'],
+                'host' => $source['host'],
+                'port' => $source['port'],
                 'mysql' => $source['mysql'],
-            ]), $output, true);
+            ]),         $output, true);
             $tables = explode(PHP_EOL, $output);
         }
 
@@ -723,22 +738,22 @@ class App
             } elseif ($source['gzip']) {
                 $gzip = ' | gzip -d ';
             }
-            $sourceCmd = $this->nvsprintf($this->cmds['fromfile'], [
+            $sourceCmd = $this->buildCommand($this->cmds['fromfile'], [
                 'file' => $source['file'],
                 'gzip' => $gzip,
             ]);
         } else {
             // mysql source
             $sourceCmd = $this->getCmd('source', $source['ssh'], [
-                'user'      => $source['user'],
-                'pass'      => $source['pass'],
-                'base'      => $source['base'],
-                'host'      => $source['host'],
-                'port'      => $source['port'],
+                'user' => $source['user'],
+                'pass' => $source['pass'],
+                'base' => $source['base'],
+                'host' => $source['host'],
+                'port' => $source['port'],
                 'mysqldump' => $source['mysqldump'],
-                'options'   => $this->getOpt(self::OPT_FIX) ? '--skip-set-charset --default-character-set=latin1' : '',
-                'tables'    => implode(' ', $source['tables']),
-                'gzip'      => $this->gzip ? ' | gzip -9 ' : '',
+                'options' => $this->getOpt(self::OPT_FIX) ? '--skip-set-charset --default-character-set=latin1' : '',
+                'tables' => $source['tables'],
+                'gzip' => $this->gzip ? ' | gzip -9 ' : '',
             ]);
         }
 
@@ -746,11 +761,10 @@ class App
         if ($target['file']) {
             // file target
             $cmd = $source['env'] ? 'markfile' : 'tofile';
-            $targetCmd = $this->nvsprintf($this->cmds[$cmd], [
-                'marker' => $this->marker,
-                'env'    => $source['env'],
-                'file'   => $target['file'],
-                'gzip'   => $target['gzip'] ? ' | gzip -9 ' : '',
+            $targetCmd = $this->buildCommand($this->cmds[$cmd], [
+                'mark' => $this->marker . $source['env'],
+                'file' => $target['file'],
+                'gzip' => $target['gzip'] ? ' | gzip -9 ' : '',
             ]);
 
             // if source is gzip, gunzip before write
@@ -760,14 +774,14 @@ class App
         } else {
             // mysql target
             $targetCmd = $this->getCmd('target', $target['ssh'], [
-                'user'    => $target['user'],
-                'pass'    => $target['pass'],
-                'base'    => $target['base'],
-                'host'    => $target['host'],
-                'port'    => $target['port'],
-                'mysql'   => $target['mysql'],
+                'user' => $target['user'],
+                'pass' => $target['pass'],
+                'base' => $target['base'],
+                'host' => $target['host'],
+                'port' => $target['port'],
+                'mysql' => $target['mysql'],
                 'options' => $this->getOpt(self::OPT_FIX) ? '--default-character-set=utf8' : '',
-                'gzip'    => $this->gzip ? 'gzip -d | ' : '',
+                'gzip' => $this->gzip ? 'gzip -d | ' : '',
             ]);
         }
         $result = $this->exec($sourceCmd . ' | ' . $targetCmd, $output);
@@ -785,8 +799,8 @@ class App
         // copy dbr to tmp
         $this->exec($this->getCmd('cp', $target['ssh'], [
             'data' => $this->getDbrData(),
-            'dbr'  => $this->dbr,
-            'php'  => $this->defaultPhp,
+            'dbr' => $this->dbr,
+            'php' => $this->defaultPhp,
         ]));
 
         // chmod +x
@@ -795,26 +809,26 @@ class App
 //            )));
 
         $replaceCmd = $this->getCmd('replace', $target['ssh'], [
-            'dbr'  => $this->dbr,
+            'dbr' => $this->dbr,
             'base' => $target['base'],
             'user' => $target['user'],
             'pass' => $target['pass'],
             'host' => $target['host'],
             'port' => $target['port'],
-            'php'  => $target['php'],
+            'php' => $target['php'],
         ]);
 
         // pre-replacement test
         $output = '';
         $result = $this->exec($this->getCmd('dbr_test', $target['ssh'], [
-            'dbr'  => $this->dbr,
+            'dbr' => $this->dbr,
             'base' => $target['base'],
             'user' => $target['user'],
             'pass' => $target['pass'],
             'host' => $target['host'],
             'port' => $target['port'],
-            'php'  => $target['php'],
-        ]), $output);
+            'php' => $target['php'],
+        ]),                   $output);
 
         if ($result !== 0) {
             $this->removeDbr($target);
@@ -852,11 +866,11 @@ class App
             }
 
             $output = '';
-            $result = $this->exec($this->nvsprintf($replaceCmd, [
-                'search'  => $replacement[$source['env']],
+            $result = $this->exec($this->buildCommand($replaceCmd, [
+                'search' => $replacement[$source['env']],
                 'replace' => $replacement[$target['env']],
                 'options' => implode(' ', $options),
-            ]), $output);
+            ]),                   $output);
 
             if ($result !== 0) {
                 $errors .= $output . PHP_EOL;
@@ -882,20 +896,22 @@ class App
     {
         $this->exec($this->getCmd('rm', $target['ssh'], [
             'dbr' => $this->dbr,
-            'ssh' => $target['ssh'],
         ]));
     }
 
-    private function getCmd($cmd, $ssh, $data = [])
+    private function getCmd($cmd, $ssh, $args = [])
     {
-        if (!array_key_exists('ssh', $data)) {
-            $data['ssh'] = $ssh;
-        }
+        $cmd = $this->buildCommand($this->cmds[$cmd], $args);
 
-        return $this->nvsprintf(
-            $this->cmds[$ssh ? 'ssh_' . $cmd : $cmd],
-            $data
-        );
+        return $ssh
+            ? $this->buildCommand(
+                'ssh {ssh} {:cmd}',
+                [
+                    'ssh' => $ssh,
+                    'cmd' => $cmd,
+                ]
+            )
+            : $cmd;
     }
 
     private function exec($cmd, &$output = null, $force = false)
