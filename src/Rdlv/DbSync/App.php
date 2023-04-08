@@ -598,7 +598,7 @@ class App
         },                           $format);
     }
 
-    private function escape($value) 
+    private function escape($value)
     {
         if (is_array($value)) {
             return implode(' ', array_map(function ($item) {
@@ -860,7 +860,12 @@ class App
 
                     // if option require a value
                     if ($optName != $long) {
-                        $options[$optName] .= ' "' . $replacement[$optName] . '"';
+                        $value = $replacement[$optName];
+//                        $options[$optName] .= ' "' . $replacement[$optName] . '"';
+                        $options[$optName] .= sprintf(
+                            ' "%s"',
+                            implode(',', is_array($value) ? $value : [$value])
+                        );
                     }
                 }
             }
