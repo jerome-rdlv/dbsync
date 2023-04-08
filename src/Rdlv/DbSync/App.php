@@ -934,13 +934,17 @@ class App
             exec($cmd, $output, $result);
             $output = implode(PHP_EOL, $output);
 
+            if ($this->getOpt(self::OPT_VERBOSE)) {
+                echo $output . PHP_EOL;
+            }
+
             return $result;
         }
     }
 
     private function printCmd($cmd)
     {
-        $lmax = 512;
+        $lmax = 1024;
         $output = '';
         if (strlen($cmd) > $lmax) {
             $output .= PHP_EOL . substr($cmd, 0, $lmax / 2) . ' ... ';
