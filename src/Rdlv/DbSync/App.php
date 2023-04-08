@@ -447,6 +447,13 @@ class App
             $this->error('No environment found in config.');
         }
 
+        // resolve environment aliases
+        foreach ($this->config['environments'] as &$environment) {
+            if (is_string($environment)) {
+                $environment = $this->config['environments'][$environment];
+            }
+        }
+
         $envList = $this->getEnvList();
 
         // must have source and target
