@@ -2,6 +2,7 @@
 
 namespace Rdlv\DbSync;
 
+use Exception;
 use PHPSQLParser\PHPSQLParser;
 use Symfony\Component\Yaml\Yaml;
 
@@ -103,6 +104,8 @@ class App
     private $path = null;
 
     private $gzip = false;
+
+    private $script;
 
     private function __construct()
     {
@@ -422,24 +425,41 @@ class App
         }
 
         $extension = pathinfo($confFile, PATHINFO_EXTENSION);
+
+        if (!$extension) {
+            // no extension, maybe a process substitution?
+            // see https://en.wikipedia.org/wiki/Process_substitution
+            $confFile = str_replace('/dev/fd', 'php://fd', $confFile);
+        }
+
+        if (!($contents = file_get_contents($confFile))) {
+            $this->error(sprintf('Config file can not be read or is empty: %s', $confFile));
+        }
+
         switch ($extension) {
             case 'yml':
             case 'yaml':
-                $this->config = Yaml::parse(file_get_contents($confFile));
+                $this->config = $this->parseYaml($contents);
                 break;
             case 'json':
-                if (function_exists('json_decode')) {
-                    $this->config = json_decode(file_get_contents($confFile), true);
-                    $error = json_last_error();
-                    if ($error != JSON_ERROR_NONE) {
-                        $this->error('Error reading ' . $confFile, json_last_error_msg());
-                    }
-                } else {
-                    $this->error('Please install json-ext to parse json config file');
-                }
+                $this->config = $this->parseJson($contents);
                 break;
             default:
-                $this->error('Config file must be in JSON or YAML format');
+                foreach (['json', 'yaml'] as $format) {
+                    try {
+                        $this->config = $this->{'parse' . ucfirst($format)}($contents);
+                    } catch (Exception $e) {
+                        $errors[$format] = $e->getMessage();
+                    }
+                }
+                if (!$this->config && $errors) {
+                    $this->error(
+                        'Errors while parsing config with multiple formats',
+                        implode(PHP_EOL, array_map(function ($format, $error) {
+                            return sprintf('%s: %s', $format, $error);
+                        }, array_keys($errors), $errors))
+                    );
+                }
         }
 
         // loading environments
@@ -508,6 +528,23 @@ class App
                 }
             }
         }
+    }
+
+    private function parseYaml($contents)
+    {
+        return Yaml::parse($contents);
+    }
+
+    private function parseJson($contents)
+    {
+        if (!function_exists('json_decode')) {
+            throw new Exception('Please install json-ext to parse json config file');
+        }
+        $data = json_decode($contents, true);
+        if (json_last_error() != JSON_ERROR_NONE) {
+            throw new Exception(sprintf('Parse error: %s', json_last_error_msg()));
+        }
+        return $data;
     }
 
     private function error($msg, $detail = '', $help = false)
