@@ -3,33 +3,33 @@
 // php 5.3 date timezone requirement, shouldn't affect anything
 date_default_timezone_set('Europe/London');
 
-$opts = array(
-    'h:'  => 'host:',
-    'n:'  => 'name:',
-    'u:'  => 'user:',
-    'p:'  => 'pass:',
-    'c:'  => 'char:',
-    's:'  => 'search:',
-    'r:'  => 'replace:',
-    't:'  => 'tables:',
-    'i:'  => 'include-cols:',
-    'x:'  => 'exclude-cols:',
-    'g'   => 'regex',
-    'l:'  => 'pagesize:',
-    'z'   => 'dry-run',
-    'e:'  => 'alter-engine:',
-    'a:'  => 'alter-collation:',
+$opts = [
+    'h:' => 'host:',
+    'n:' => 'name:',
+    'u:' => 'user:',
+    'p:' => 'pass:',
+    'c:' => 'char:',
+    's:' => 'search:',
+    'r:' => 'replace:',
+    't:' => 'tables:',
+    'i:' => 'include-cols:',
+    'x:' => 'exclude-cols:',
+    'g' => 'regex',
+    'l:' => 'page-size:',
+    'z' => 'dry-run',
+    'e:' => 'alter-engine:',
+    'a:' => 'alter-collation:',
     'v::' => 'verbose::',
     'port:',
     'help',
-);
+];
 
-$required = array(
+$required = [
     'h:',
     'n:',
     'u:',
     'p:',
-);
+];
 
 function strip_colons($string)
 {
@@ -95,7 +95,7 @@ ARGS
   -g, --regex [no value]
     Treats value for -s or --search as a regular expression and
     -r or --replace as a regular expression replacement.
-  -l, --pagesize
+  -l, --page-size
     How rows to fetch at a time from a table.
   -z, --dry-run [no value]
     Prevents any updates happening so you can preview the number
@@ -136,27 +136,30 @@ if ($missing_arg) {
 }
 
 // new args array
-$args = array(
+$args = [
     'verbose' => true,
     'dry_run' => false,
-);
+];
 
 // create $args array
 foreach ($options as $key => $value) {
-
     // transpose keys
-    if (($is_short = array_search($key, $short_opts_normal)) !== false)
+    if (($is_short = array_search($key, $short_opts_normal)) !== false) {
         $key = $long_opts_normal[$is_short];
+    }
 
     // true/false string mapping
-    if (is_string($value) && in_array($value, array('false', 'no', '0')))
+    if (is_string($value) && in_array($value, ['false', 'no', '0'])) {
         $value = false;
-    if (is_string($value) && in_array($value, array('true', 'yes', '1')))
+    }
+    if (is_string($value) && in_array($value, ['true', 'yes', '1'])) {
         $value = true;
+    }
 
     // boolean options as is, eg. a no value arg should be set true
-    if (in_array($key, $long_opts))
+    if (in_array($key, $long_opts)) {
         $value = true;
+    }
 
     // change to underscores
     $key = str_replace('-', '_', $key);
@@ -183,12 +186,12 @@ class icit_srdb
     /**
      * @var array List of all the tables in the database
      */
-    public $all_tables = array();
+    public $all_tables = [];
 
     /**
      * @var array Tables to run the replacement on
      */
-    public $tables = array();
+    public $tables = [];
 
     /**
      * @var string Search term
@@ -214,7 +217,7 @@ class icit_srdb
     /**
      * @var array Available engines
      */
-    public $engines = array();
+    public $engines = [];
 
     /**
      * @var bool|string Convert to new engine
@@ -229,12 +232,12 @@ class icit_srdb
     /**
      * @var array Column names to exclude
      */
-    public $exclude_cols = array();
+    public $exclude_cols = [];
 
     /**
      * @var array Column names to include
      */
-    public $include_cols = array();
+    public $include_cols = [];
 
     /**
      * @var bool True if doing a dry run
@@ -256,12 +259,12 @@ class icit_srdb
     /**
      * @var array Stores a list of exceptions
      */
-    public $errors = array(
-        'search'  => array(),
-        'db'      => array(),
-        'tables'  => array(),
-        'results' => array(),
-    );
+    public $errors = [
+        'search' => [],
+        'db' => [],
+        'tables' => [],
+        'results' => [],
+    ];
 
     public $error_type = 'search';
 
@@ -269,7 +272,7 @@ class icit_srdb
     /**
      * @var array Stores the report array
      */
-    public $report = array();
+    public $report = [];
 
 
     /**
@@ -322,36 +325,36 @@ class icit_srdb
      */
     public function __construct($args)
     {
-
-        $args = array_merge(array(
-            'name'            => '',
-            'user'            => '',
-            'pass'            => '',
-            'host'            => '',
-            'port'            => 3306,
-            'search'          => '',
-            'replace'         => '',
-            'tables'          => array(),
-            'exclude_cols'    => array(),
-            'include_cols'    => array(),
-            'dry_run'         => true,
-            'regex'           => false,
-            'pagesize'        => 50000,
-            'alter_engine'    => false,
-            'alter_collation' => false,
-            'verbose'         => false,
-        ), $args);
+        $args = array_merge([
+                                'name' => '',
+                                'user' => '',
+                                'pass' => '',
+                                'host' => '',
+                                'port' => 3306,
+                                'search' => '',
+                                'replace' => '',
+                                'tables' => [],
+                                'exclude_cols' => [],
+                                'include_cols' => [],
+                                'dry_run' => true,
+                                'regex' => false,
+                                'page_size' => 50000,
+                                'alter_engine' => false,
+                                'alter_collation' => false,
+                                'verbose' => false,
+                            ], $args);
 
         // handle exceptions
-        set_exception_handler(array($this, 'exceptions'));
+        set_exception_handler([$this, 'exceptions']);
 
         // handle errors
-        set_error_handler(array($this, 'errors'), E_ERROR | E_WARNING);
+        set_error_handler([$this, 'errors'], E_ERROR | E_WARNING);
 
         // allow a string for columns
-        foreach (array('exclude_cols', 'include_cols', 'tables') as $maybe_string_arg) {
-            if (is_string($args[$maybe_string_arg]))
+        foreach (['exclude_cols', 'include_cols', 'tables'] as $maybe_string_arg) {
+            if (is_string($args[$maybe_string_arg])) {
                 $args[$maybe_string_arg] = array_filter(array_map('trim', explode(',', $args[$maybe_string_arg])));
+            }
         }
 
         // verify that the port number is logical		
@@ -369,29 +372,28 @@ class icit_srdb
 
         // set class vars
         foreach ($args as $name => $value) {
-            if (is_string($value))
+            if (is_string($value)) {
                 $value = stripcslashes($value);
-            if (is_array($value))
+            }
+            if (is_array($value)) {
                 $value = array_map('stripcslashes', $value);
+            }
             $this->set($name, $value);
         }
 
         // only for non cli call, cli set no timeout, no memory limit
         if (!defined('STDIN')) {
-
             // increase time out limit
             @set_time_limit(60 * 10);
 
             // try to push the allowed memory up, while we're at it
             @ini_set('memory_limit', '1024M');
-
         }
 
         // set up db connection
         $this->db_setup();
 
         if ($this->db_valid()) {
-
             // update engines
             if ($this->alter_engine) {
                 $report = $this->update_engine($this->alter_engine, $this->tables);
@@ -402,11 +404,8 @@ class icit_srdb
             else {
                 $report = $this->replacer($this->search, $this->replace, $this->tables);
             }
-
         } else {
-
             $report = $this->report;
-
         }
 
         // store report
@@ -422,8 +421,9 @@ class icit_srdb
      */
     public function __destruct()
     {
-        if ($this->db_valid())
+        if ($this->db_valid()) {
             $this->db_close();
+        }
     }
 
 
@@ -445,9 +445,13 @@ class icit_srdb
         echo $exception->getMessage() . "\n";
     }
 
-    public function errors(/** @noinspection PhpUnusedParameterInspection */
-        $no, $message, $file, $line)
-    {
+    public function errors(
+        /** @noinspection PhpUnusedParameterInspection */
+        $no,
+        $message,
+        $file,
+        $line
+    ) {
         echo $message . "\n";
     }
 
@@ -466,8 +470,9 @@ class icit_srdb
 
     public function add_error($error, $type = null)
     {
-        if ($type !== null)
+        if ($type !== null) {
             $this->error_type = $type;
+        }
         $this->errors[$this->error_type][] = $error;
         $this->log('error', $this->error_type, $error);
     }
@@ -563,7 +568,8 @@ class icit_srdb
     public function connect_pdo()
     {
         try {
-            $connection = new PDO("mysql:host={$this->host};port={$this->port};dbname={$this->name}", $this->user, $this->pass);
+            $connection = new PDO("mysql:host={$this->host};port={$this->port};dbname={$this->name}", $this->user,
+                                  $this->pass);
         } catch (PDOException $e) {
             $this->add_error($e->getMessage(), 'db');
             $connection = false;
@@ -572,8 +578,9 @@ class icit_srdb
         // check if there's a problem with our database at this stage
         if ($connection && !$connection->query('SHOW TABLES')) {
             $error_info = $connection->errorInfo();
-            if (!empty($error_info) && is_array($error_info))
-                $this->add_error(array_pop($error_info), 'db'); // Array pop will only accept a $var..
+            if (!empty($error_info) && is_array($error_info)) {
+                $this->add_error(array_pop($error_info), 'db');
+            } // Array pop will only accept a $var..
             $connection = false;
         }
 
@@ -618,25 +625,22 @@ class icit_srdb
 		";
 
         $all_tables_mysql = $this->db_query($show_table_status);
-        $all_tables = array();
+        $all_tables = [];
 
         if (!$all_tables_mysql) {
-
             $this->add_error($this->db_error(), 'db');
-
         } else {
-
             // set the character set
             //$this->db_set_charset( $this->get( 'charset' ) );
 
             while ($table = $this->db_fetch($all_tables_mysql)) {
                 // ignore views
-                if ($table['Comment'] == 'VIEW')
+                if ($table['Comment'] == 'VIEW') {
                     continue;
+                }
 
                 $all_tables[$table[0]] = $table;
             }
-
         }
 
         return $all_tables;
@@ -685,14 +689,15 @@ class icit_srdb
     {
         // get available engines
         $mysql_engines = $this->db_query('SHOW ENGINES;');
-        $engines = array();
+        $engines = [];
 
         if (!$mysql_engines) {
             $this->add_error($this->db_error(), 'db');
         } else {
             while ($engine = $this->db_fetch($mysql_engines)) {
-                if (in_array($engine['Support'], array('YES', 'DEFAULT')))
+                if (in_array($engine['Support'], ['YES', 'DEFAULT'])) {
                     $engines[] = $engine['Engine'];
+                }
             }
         }
 
@@ -702,18 +707,20 @@ class icit_srdb
 
     public function db_query($query)
     {
-        if ($this->use_pdo())
+        if ($this->use_pdo()) {
             return $this->db->query($query);
-        else
+        } else {
             return mysqli_query($this->db, $query);
+        }
     }
 
     public function db_update($query)
     {
-        if ($this->use_pdo())
+        if ($this->use_pdo()) {
             return $this->db->exec($query);
-        else
+        } else {
             return mysqli_query($this->db, $query);
+        }
     }
 
     public function db_error()
@@ -721,53 +728,59 @@ class icit_srdb
         if ($this->use_pdo()) {
             $error_info = $this->db->errorInfo();
             return !empty($error_info) && is_array($error_info) ? array_pop($error_info) : 'Unknown error';
-        } else
+        } else {
             return mysqli_error($this->db);
+        }
     }
 
     public function db_fetch($data)
     {
 //        if ($this->use_pdo())
-        if ($data instanceof PDOStatement)
+        if ($data instanceof PDOStatement) {
             return $data->fetch();
-        else
+        } else {
             return mysqli_fetch_array($data);
+        }
     }
 
     public function db_escape($string)
     {
 //        if ($this->use_pdo())
-        if ($this->db instanceof PDO)
+        if ($this->db instanceof PDO) {
             return $this->db->quote($string);
-        else
+        } else {
             return "'" . mysqli_real_escape_string($this->db, $string) . "'";
+        }
     }
 
     public function db_free_result($data)
     {
 //        if ($this->use_pdo())
-        if ($data instanceof PDOStatement)
+        if ($data instanceof PDOStatement) {
             $data->closeCursor();
-        else
+        } else {
             mysqli_free_result($data);
+        }
     }
 
     public function db_set_charset($charset = '')
     {
         if (!empty($charset)) {
-            if (!$this->use_pdo() && function_exists('mysqli_set_charset'))
+            if (!$this->use_pdo() && function_exists('mysqli_set_charset')) {
                 mysqli_set_charset($this->db, $charset);
-            else
+            } else {
                 $this->db_query('SET NAMES ' . $charset);
+            }
         }
     }
 
     public function db_close()
     {
-        if ($this->use_pdo())
+        if ($this->use_pdo()) {
             unset($this->db);
-        else
+        } else {
             mysqli_close($this->db);
+        }
     }
 
     public function db_valid()
@@ -874,8 +887,9 @@ class icit_srdb
     public function preg_fix_serialised_count($matches)
     {
         $length = mb_strlen($matches[2]);
-        if ($length !== intval($matches[1]))
+        if ($length !== intval($matches[1])) {
             return "s:{$length}:\"{$matches[2]}\";";
+        }
         return $matches[0];
     }
 
@@ -893,39 +907,41 @@ class icit_srdb
      *
      * @return array|boolean    Collection of information gathered during the run or false
      */
-    public function replacer($search = '', $replace = '', $tables = array())
+    public function replacer($search = '', $replace = '', $tables = [])
     {
-
         // check we have a search string, bail if not
         if (empty($search)) {
             $this->add_error('Search string is empty', 'search');
             return false;
         }
 
-        $report = array('tables'        => 0,
-                        'rows'          => 0,
-                        'change'        => 0,
-                        'updates'       => 0,
-                        'start'         => microtime(),
-                        'end'           => microtime(),
-                        'errors'        => array(),
-                        'table_reports' => array(),
-        );
-
-        $table_report = array(
-            'rows'    => 0,
-            'change'  => 0,
-            'changes' => array(),
+        $report = [
+            'tables' => 0,
+            'rows' => 0,
+            'change' => 0,
             'updates' => 0,
-            'start'   => microtime(),
-            'end'     => microtime(),
-            'errors'  => array(),
-        );
+            'start' => microtime(),
+            'end' => microtime(),
+            'errors' => [],
+            'table_reports' => [],
+        ];
+
+        $table_report = [
+            'rows' => 0,
+            'change' => 0,
+            'changes' => [],
+            'updates' => 0,
+            'start' => microtime(),
+            'end' => microtime(),
+            'errors' => [],
+        ];
 
         $dry_run = $this->get('dry_run');
 
         if ($this->get('dry_run'))    // Report this as a search-only run.
+        {
             $this->add_error('The dry-run option was selected. No replacements will be made.', 'results');
+        }
 
         // if no tables selected assume all
         if (empty($tables)) {
@@ -934,19 +950,17 @@ class icit_srdb
         }
 
         if (is_array($tables) && !empty($tables)) {
-            
             $parser = new Parser();
 
             foreach ($tables as $table) {
-
                 $encoding = $this->get_table_character_set($table);
                 switch ($encoding) {
-
                     // Tables encoded with this work for me only when I set names to utf8. I don't trust this in the wild so I'm going to avoid.
                     case 'utf16':
                     case 'utf32':
                         //$encoding = 'utf8';
-                        $this->add_error("The table \"{$table}\" is encoded using \"{$encoding}\" which is currently unsupported.", 'results');
+                        $this->add_error("The table \"{$table}\" is encoded using \"{$encoding}\" which is currently unsupported.",
+                                         'results');
                         continue 2;
                     default:
                         $this->db_set_charset($encoding);
@@ -960,7 +974,8 @@ class icit_srdb
                 list($primary_key, $columns) = $this->get_columns($table);
 
                 if ($primary_key === null) {
-                    $this->add_error("The table \"{$table}\" has no primary key. Changes will have to be made manually.", 'results');
+                    $this->add_error("The table \"{$table}\" has no primary key. Changes will have to be made manually.",
+                                     'results');
                     continue;
                 }
 
@@ -979,26 +994,24 @@ class icit_srdb
                 $pages = ceil($row_count / $page_size);
 
                 for ($page = 0; $page < $pages; $page++) {
-
                     $start = $page * $page_size;
 
                     // Grab the content of the table
                     $data = $this->db_query(sprintf('SELECT * FROM `%s` LIMIT %d, %d', $table, $start, $page_size));
 
-                    if (!$data)
+                    if (!$data) {
                         $this->add_error($this->db_error(), 'results');
+                    }
 
                     while ($row = $this->db_fetch($data)) {
-
                         $report['rows']++; // Increment the row counter
                         $new_table_report['rows']++;
 
-                        $update_sql = array();
-                        $where_sql = array();
+                        $update_sql = [];
+                        $where_sql = [];
                         $update = false;
 
                         foreach ($columns as $column) {
-
                             $edited_data = $data_to_fix = $row[$column];
 
                             if ($primary_key == $column) {
@@ -1007,12 +1020,14 @@ class icit_srdb
                             }
 
                             // exclude cols
-                            if (in_array($column, $this->exclude_cols))
+                            if (in_array($column, $this->exclude_cols)) {
                                 continue;
+                            }
 
                             // include cols
-                            if (!empty($this->include_cols) && !in_array($column, $this->include_cols))
+                            if (!empty($this->include_cols) && !in_array($column, $this->include_cols)) {
                                 continue;
+                            }
 
                             // Run a search replace on the data that'll respect the serialisation.
 //                            $edited_data = $this->recursive_unserialize_replace($search, $replace, $data_to_fix);
@@ -1032,50 +1047,44 @@ class icit_srdb
 
                             // Something was changed
                             if ($edited_data != $data_to_fix) {
-
                                 $report['change']++;
                                 $new_table_report['change']++;
 
                                 // log first x changes
                                 if ($new_table_report['change'] <= $this->get('report_change_num')) {
-                                    $new_table_report['changes'][] = array(
-                                        'row'    => $new_table_report['rows'],
+                                    $new_table_report['changes'][] = [
+                                        'row' => $new_table_report['rows'],
                                         'column' => $column,
-                                        'from'   => utf8_encode($data_to_fix),
-                                        'to'     => utf8_encode($edited_data),
-                                    );
+//                                        'from'   => utf8_encode($data_to_fix),
+//                                        'to'     => utf8_encode($edited_data),
+                                        'from' => $data_to_fix,
+                                        'to' => $edited_data,
+                                    ];
                                 }
 
                                 $update_sql[] = "`{$column}` = " . $this->db_escape($edited_data);
                                 $update = true;
-
                             }
-
                         }
 
                         if ($dry_run) {
                             // nothing for this state
                         } elseif ($update && !empty($where_sql)) {
-
-                            $sql = 'UPDATE ' . $table . ' SET ' . implode(', ', $update_sql) . ' WHERE ' . implode(' AND ', array_filter($where_sql));
+                            $sql = 'UPDATE ' . $table . ' SET ' . implode(', ',
+                                                                          $update_sql) . ' WHERE ' . implode(' AND ',
+                                                                                                             array_filter($where_sql));
                             $result = $this->db_update($sql);
 
                             if (!is_int($result) && !$result) {
-
                                 $this->add_error($this->db_error(), 'results');
-
                             } else {
-
                                 $report['updates']++;
                                 $new_table_report['updates']++;
                             }
-
                         }
-
                     }
 
                     $this->db_free_result($data);
-
                 }
 
                 $new_table_report['end'] = microtime();
@@ -1086,7 +1095,6 @@ class icit_srdb
                 // log result
                 $this->log('search_replace_table_end', $table, $new_table_report);
             }
-
         }
 
         $report['end'] = microtime();
@@ -1099,9 +1107,8 @@ class icit_srdb
 
     public function get_columns($table)
     {
-
         $primary_key = null;
-        $columns = array();
+        $columns = [];
 
         // Get a list of columns in this table
         $fields = $this->db_query("DESCRIBE {$table}");
@@ -1110,18 +1117,18 @@ class icit_srdb
         } else {
             while ($column = $this->db_fetch($fields)) {
                 $columns[] = $column['Field'];
-                if ($column['Key'] == 'PRI')
+                if ($column['Key'] == 'PRI') {
                     $primary_key = $column['Field'];
+                }
             }
         }
 
-        return array($primary_key, $columns);
+        return [$primary_key, $columns];
     }
 
 
     public function do_column()
     {
-
     }
 
 
@@ -1133,17 +1140,16 @@ class icit_srdb
      *
      * @return array    Modification report
      */
-    public function update_engine($engine = 'MyISAM', $tables = array())
+    public function update_engine($engine = 'MyISAM', $tables = [])
     {
-
         $report = false;
 
-        if (empty($this->engines))
+        if (empty($this->engines)) {
             $this->set('engines', $this->get_engines());
+        }
 
         if (in_array($engine, $this->get('engines'))) {
-
-            $report = array('engine' => $engine, 'converted' => array());
+            $report = ['engine' => $engine, 'converted' => []];
 
             if (empty($tables)) {
                 $all_tables = $this->get_tables();
@@ -1156,23 +1162,23 @@ class icit_srdb
                 // are we updating the engine?
                 if ($table_info['Engine'] != $engine) {
                     $engine_converted = $this->db_query("alter table {$table} engine = {$engine};");
-                    if (!$engine_converted)
+                    if (!$engine_converted) {
                         $this->add_error($this->db_error(), 'results');
-                    else
+                    } else {
                         $report['converted'][$table] = true;
+                    }
                     continue;
                 } else {
                     $report['converted'][$table] = false;
                 }
 
-                if (isset($report['converted'][$table]))
+                if (isset($report['converted'][$table])) {
                     $this->log('update_engine', $table, $report, $engine);
+                }
             }
-
         } else {
-
-            $this->add_error('Cannot convert tables to unsupported table engine &rdquo;' . $engine . '&ldquo;', 'results');
-
+            $this->add_error('Cannot convert tables to unsupported table engine &rdquo;' . $engine . '&ldquo;',
+                             'results');
         }
 
         return $report;
@@ -1187,14 +1193,12 @@ class icit_srdb
      *
      * @return array    Modification report
      */
-    public function update_collation($collation = 'utf8_unicode_ci', $tables = array())
+    public function update_collation($collation = 'utf8_unicode_ci', $tables = [])
     {
-
         $report = false;
 
         if (is_string($collation)) {
-
-            $report = array('collation' => $collation, 'converted' => array());
+            $report = ['collation' => $collation, 'converted' => []];
 
             if (empty($tables)) {
                 $all_tables = $this->get_tables();
@@ -1210,23 +1214,22 @@ class icit_srdb
                 // are we updating the engine?
                 if ($table_info['Collation'] != $collation) {
                     $engine_converted = $this->db_query("alter table {$table} convert to character set {$charset} collate {$collation};");
-                    if (!$engine_converted)
+                    if (!$engine_converted) {
                         $this->add_error($this->db_error(), 'results');
-                    else
+                    } else {
                         $report['converted'][$table] = true;
+                    }
                     continue;
                 } else {
                     $report['converted'][$table] = false;
                 }
 
-                if (isset($report['converted'][$table]))
+                if (isset($report['converted'][$table])) {
                     $this->log('update_collation', $table, $report, $collation);
+                }
             }
-
         } else {
-
             $this->add_error('Collation must be a valid string', 'results');
-
         }
 
         return $report;
@@ -1236,23 +1239,23 @@ class icit_srdb
     /**
      * Replace all occurrences of the search string with the replacement string.
      *
-     * @author Sean Murphy <sean@iamseanmurphy.com>
-     * @copyright Copyright 2012 Sean Murphy. All rights reserved.
-     * @license http://creativecommons.org/publicdomain/zero/1.0/
-     * @link http://php.net/manual/function.str-replace.php
-     *
      * @param mixed $search
      * @param mixed $replace
      * @param mixed $subject
      * @param int $count
      * @return mixed
+     * @copyright Copyright 2012 Sean Murphy. All rights reserved.
+     * @license http://creativecommons.org/publicdomain/zero/1.0/
+     * @link http://php.net/manual/function.str-replace.php
+     *
+     * @author Sean Murphy <sean@iamseanmurphy.com>
      */
     public static function mb_str_replace($search, $replace, $subject, &$count = 0)
     {
         if (!is_array($subject)) {
             // Normalize $search and $replace so they are both arrays of the same length
-            $searches = is_array($search) ? array_values($search) : array($search);
-            $replacements = is_array($replace) ? array_values($replace) : array($replace);
+            $searches = is_array($search) ? array_values($search) : [$search];
+            $replacements = is_array($replace) ? array_values($replace) : [$replace];
             $replacements = array_pad($replacements, count($searches), '');
 
             foreach ($searches as $key => $search) {
@@ -1303,18 +1306,19 @@ class icit_srdb
     {
         /* Only do the slow convert if there are 8-bit characters */
         /* avoid using 0xA0 (\240) in ereg ranges. RH73 does not like that */
-        if (!preg_match("/[\200-\237]/", $string) and !preg_match("/[\241-\377]/", $string))
+        if (!preg_match("/[\200-\237]/", $string) and !preg_match("/[\241-\377]/", $string)) {
             return $string;
+        }
 
         // decode three byte unicode characters
         $string = preg_replace("/([\340-\357])([\200-\277])([\200-\277])/e",
-            "'&#'.((ord('\\1')-224)*4096 + (ord('\\2')-128)*64 + (ord('\\3')-128)).';'",
-            $string);
+                               "'&#'.((ord('\\1')-224)*4096 + (ord('\\2')-128)*64 + (ord('\\3')-128)).';'",
+                               $string);
 
         // decode two byte unicode characters
         $string = preg_replace("/([\300-\337])([\200-\277])/e",
-            "'&#'.((ord('\\1')-192)*64+(ord('\\2')-128)).';'",
-            $string);
+                               "'&#'.((ord('\\1')-192)*64+(ord('\\2')-128)).';'",
+                               $string);
 
         return $string;
     }
@@ -1327,7 +1331,6 @@ class icit_srdb_cli extends icit_srdb
 
     public function log($type = '')
     {
-
         $args = array_slice(func_get_args(), 1);
 
         $output = "";
@@ -1366,9 +1369,9 @@ It took {$time} seconds";
                 break;
         }
 
-        if ($this->verbose)
+        if ($this->verbose) {
             echo $output . "\n";
-
+        }
     }
 
 }
@@ -1446,7 +1449,7 @@ abstract class NodeArrayContent extends Node
     protected function replaceInArray($callback)
     {
         $count = 0;
-        
+
         // replace in keys
         $new = [];
         foreach ($this->content as $key => $node) {
@@ -1464,8 +1467,8 @@ abstract class NodeArrayContent extends Node
         $count += array_reduce($this->content, function ($count, $item) use ($callback) {
             /** @var $item Node */
             return $count + $item->replace($callback);
-        }, 0);
-        
+        },                     0);
+
         return $count;
     }
 }
@@ -1737,8 +1740,8 @@ class Parser
     /**
      * Parse a string containing a serialized data structure.
      * This is the initial entry point into the recursive parser.
-     * @throws Exception
      * @return Node
+     * @throws Exception
      */
     public function parse($string = null)
     {
