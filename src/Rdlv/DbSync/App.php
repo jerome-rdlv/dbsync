@@ -48,7 +48,7 @@ class App
         return new self();
     }
 
-    private $config = null;
+    private $config = [];
 
     private $dbr = 'dbr_%s.php';
 
@@ -76,7 +76,7 @@ class App
         'g' => 'regex',
     ];
 
-    private $options = null;
+    private $options;
 
     private $colors = [
         'no' => '00',
@@ -97,7 +97,7 @@ class App
         'dump_test' => '{:dump} --help > /dev/null 2>&1',
         'tables' => '{:mysql} --skip-column-names -u {:user} -p{:pass} -h {:host} -P {:port} --protocol=TCP {:base} -e "show tables;"',
         'source' => '{:dump} {options} -u {:user} -p{:pass} --add-drop-table --no-create-db --no-tablespaces -h {:host} -P {:port} --protocol=TCP {:base} {:tables} {gzip}',
-//        'target' => '{gzip} {:mysql} {options} -u {:user} -p{:pass} -h {:host} -P {:port} --protocol=TCP {:base}',
+        // drop MariaDB security which is incompatible with MySQL and old MariaDB versions
         'target' => '{gzip} sed \'s|/\*M!999999\\\\-.*\*/||\' | {:mysql} {options} -u {:user} -p{:pass} -h {:host} -P {:port} --protocol=TCP {:base}',
         'markfile' => '{ echo {:mark}; cat; } {gzip} > {:file}',
         'tofile' => ' cat {gzip} > {:file}',
@@ -109,7 +109,7 @@ class App
         'replace' => '{:php} -f {:dbr} -- -n {:base} -u {:user} -p{:pass} -h {:host} --port {:port} -s{:search} -r{:replace} {options}',
     ];
 
-    private $envs = null;
+    private $envs = [];
 
     private $path = null;
 
@@ -229,7 +229,7 @@ class App
         foreach ($items as $key => $env) {
             $out[$env] = $key . ' ';
             if ($this->envs[$env]['file']) {
-                $out[$env] .= $this->c('file', 'no');
+                $out[$env] .= $this->c('file');
             } else {
                 $out[$env] .= $this->c($this->envs[$env]['env'], 'yellow');
             }
@@ -250,7 +250,7 @@ class App
         }
 
         // detail
-        foreach ($items as $key => $env) {
+        foreach ($items as $env) {
             echo str_pad($out[$env], $length + 2, ' ', STR_PAD_LEFT) . "  ";
 
             if ($this->envs[$env]['file']) {
@@ -334,7 +334,7 @@ class App
         // gzip may be useful for db transfert only
         if (!$this->getOpt(self::OPT_REPLACEMENTS_ONLY)) {
             // gzip is useful if one of the end (at least) is remote
-            foreach ($this->envs as $env => $config) {
+            foreach ($this->envs as $config) {
                 if ($config['ssh']) {
                     $gzipUseful = true;
                     break;
@@ -463,6 +463,9 @@ class App
         }
     }
 
+    /**
+     * @throws Exception
+     */
     private function loadConfig()
     {
         $confFile = $this->getOpt(self::OPT_CONF);
@@ -503,6 +506,7 @@ class App
                 $this->config = $this->parseJson($contents);
                 break;
             default:
+                $errors = [];
                 foreach (['json', 'yaml'] as $format) {
                     try {
                         $this->config = $this->{'parse' . ucfirst($format)}($contents);
@@ -591,16 +595,14 @@ class App
         }
     }
 
-    private function getDumpCommand($env)
-    {
-        $this->exec($this->getCmd());
-    }
-
     private function parseYaml($contents)
     {
         return Yaml::parse($contents);
     }
 
+    /**
+     * @throws Exception
+     */
     private function parseJson($contents)
     {
         if (!function_exists('json_decode')) {
@@ -626,6 +628,7 @@ class App
         exit;
     }
 
+    /** @noinspection PhpSameParameterValueInspection */
     private function warning($msg, $detail = '')
     {
         echo $this->c($msg, 'red') . PHP_EOL;
@@ -647,9 +650,9 @@ class App
         echo "      No database transfert, replacements on target only." . PHP_EOL;
         echo "    -" . self::OPT_NO_REPLACEMENT . ", --" . self::LOPT_NO_REPLACEMENT . PHP_EOL;
         echo "      Do not execute replacements, database transfert only." . PHP_EOL;
-        echo "    -" . self::OPT_FIX . ", --" . self::LOPT_FIX . "" . PHP_EOL;
+        echo "    -" . self::OPT_FIX . ", --" . self::LOPT_FIX . PHP_EOL;
         echo "      Try to fix database charset problems like double utf8 encoded strings." . PHP_EOL;
-        echo "    -" . self::OPT_INCLUDE . ", --" . self::LOPT_INCLUDE . "" . PHP_EOL;
+        echo "    -" . self::OPT_INCLUDE . ", --" . self::LOPT_INCLUDE . PHP_EOL;
         echo "      Include only given tables in sync. This option may be used multiple times." . PHP_EOL;
         echo "    -" . self::OPT_EXCLUDE . ", --" . self::LOPT_EXCLUDE . PHP_EOL;
         echo "      Exclude tables from sync. This option may be used multiple times." . PHP_EOL;
@@ -693,12 +696,11 @@ class App
     /**
      * @param $format
      * @param array $vars
-     * @param string $regex
      * @return array|string|string[]|null
      */
-    private function buildCommand($format, $vars = [], $regex = '/{([^{}]*?)}/')
+    private function buildCommand($format, $vars = [])
     {
-        return preg_replace_callback($regex, function ($matches) use ($vars) {
+        return preg_replace_callback('/{([^{}]*?)}/', function ($matches) use ($vars) {
             $name = preg_replace('/^:/', '', $matches[1]);
             if (array_key_exists($name, $vars)) {
                 return substr($matches[1], 0, 1) === ':'
@@ -756,7 +758,7 @@ class App
             }
             // just checking if all included tables exist
             foreach ($include as $table) {
-                if (array_search($table, $tables) === false) {
+                if (!in_array($table, $tables)) {
                     $this->error('The included table `' . $table . '` is not found', $available);
                 }
             }
