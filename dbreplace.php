@@ -1073,13 +1073,17 @@ class icit_srdb
                             $sql = 'UPDATE ' . $table . ' SET ' . implode(', ',
                                                                           $update_sql) . ' WHERE ' . implode(' AND ',
                                                                                                              array_filter($where_sql));
-                            $result = $this->db_update($sql);
+                            try {
+                                $result = $this->db_update($sql);
 
-                            if (!is_int($result) && !$result) {
-                                $this->add_error($this->db_error(), 'results');
-                            } else {
-                                $report['updates']++;
-                                $new_table_report['updates']++;
+                                if (!is_int($result) && !$result) {
+                                    $this->add_error($this->db_error(), 'results');
+                                } else {
+                                    $report['updates']++;
+                                    $new_table_report['updates']++;
+                                }
+                            } catch (Exception $e) {
+                                $this->add_error(sprintf('row %d: %s', $row[key($row)], $e->getMessage()), 'error');
                             }
                         }
                     }
@@ -1259,7 +1263,7 @@ class icit_srdb
             $replacements = array_pad($replacements, count($searches), '');
 
             foreach ($searches as $key => $search) {
-                $parts = mb_split(preg_quote($search), $subject);
+                $parts = mb_split(preg_quote($search), $subject) ?: [];
                 $count += count($parts) - 1;
                 $subject = implode($replacements[$key], $parts);
             }

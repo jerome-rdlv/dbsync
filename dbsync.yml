@@ -24,6 +24,11 @@ environments:
 
         # if targeting prod, a confirmation will be asked before proceeding
 #        protected: true
+    test:
+        # add support for connection without password, and with config file
+        docker: container-name
+        # will be probably no php to run replacement, so should really implement replacements on the SQL stream
+        
 
 replacements:
     

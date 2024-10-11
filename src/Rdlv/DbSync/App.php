@@ -53,8 +53,16 @@ class App
     private $dbr = 'dbr_%s.php';
 
     private $defaultPhp = 'php';
-    private $defaultMysql = 'mysql';
-    private $defaultMysqldump = 'mysqldump';
+
+    private $defaultSql = [
+        'mysql',
+        'mariadb',
+    ];
+
+    private $defaultDumps = [
+        'mysqldump',
+        'mariadb-dump',
+    ];
 
     // used to mark source env in dump file
     private $marker = '-- sync-db env: ';
@@ -83,16 +91,18 @@ class App
     ];
 
     private $cmds = [
-        'test' => 'printf "use {:base};" | {:mysql} -u {:user} -p{:pass} -h {:host} -P {:port} --protocol=TCP {:base}',
+        'test' => 'printf "use {base};" | {:mysql} -u {:user} -p{:pass} -h {:host} -P {:port} --protocol=TCP {:base}',
         'gzip_test' => 'gzip -V',
+        'sql_test' => '{:mysql} --help > /dev/null 2>&1',
+        'dump_test' => '{:dump} --help > /dev/null 2>&1',
         'tables' => '{:mysql} --skip-column-names -u {:user} -p{:pass} -h {:host} -P {:port} --protocol=TCP {:base} -e "show tables;"',
-        'source' => '{:mysqldump} {options} -u {:user} -p{:pass} --add-drop-table --no-create-db --no-tablespaces -h {:host} -P {:port} --protocol=TCP {:base} {:tables} {gzip}',
-        'target' => '{gzip} {:mysql} {options} -u {:user} -p{:pass} -h {:host} -P {:port} --protocol=TCP {:base}',
+        'source' => '{:dump} {options} -u {:user} -p{:pass} --add-drop-table --no-create-db --no-tablespaces -h {:host} -P {:port} --protocol=TCP {:base} {:tables} {gzip}',
+//        'target' => '{gzip} {:mysql} {options} -u {:user} -p{:pass} -h {:host} -P {:port} --protocol=TCP {:base}',
+        'target' => '{gzip} sed \'s|/\*M!999999\\\\-.*\*/||\' | {:mysql} {options} -u {:user} -p{:pass} -h {:host} -P {:port} --protocol=TCP {:base}',
         'markfile' => '{ echo {:mark}; cat; } {gzip} > {:file}',
         'tofile' => ' cat {gzip} > {:file}',
         'fromfile' => 'cat {:file} {gzip}',
         'cp' => 'printf {:data} | {:php} -r "echo base64_decode(stream_get_contents(STDIN));" > {:dbr}',
-        'ssh_cp' => 'printf {:data} | {:php} -r "echo base64_decode(stream_get_contents(STDIN));" | ssh {ssh} \'cat > {:dbr}\'',
         'chmod' => 'chmod +x {:dbr}',
         'rm' => 'rm {:dbr}',
         'dbr_test' => '{:php} -f {:dbr} -- -v -n {:base} -u {:user} -p{:pass} -h {:host} --port {:port}',
@@ -107,6 +117,9 @@ class App
 
     private $script;
 
+    /**
+     * @throws Exception
+     */
     private function __construct()
     {
         global $argv;
@@ -171,6 +184,9 @@ class App
         }
 
         $this->envs['source']['tables'] = $this->getTables();
+        if (!$this->envs['source']['tables']) {
+            $this->error('No tables are selected with current configuration.');
+        }
 
         // try to extract origin env from the file
         if ($this->envs['source']['file']) {
@@ -257,7 +273,7 @@ class App
             $token = strtoupper(substr(sha1(rand()), 0, 4));
             $answer = readline(
                 $this->c(PHP_EOL . "Target env " . $this->envs['target']['env'] . " is protected!" . PHP_EOL . "Type ",
-                         'red') .
+                    'red') .
                 $this->c($token, 'red', true) .
                 $this->c(" to proceed anyway: ", 'red')
             );
@@ -302,6 +318,9 @@ class App
         return null;
     }
 
+    /**
+     * @throws Exception
+     */
     private function checkConnections()
     {
         if ($this->envs['source']['file'] && $this->envs['target']['file']
@@ -327,35 +346,74 @@ class App
         $gzipAvailable = true;
 
         foreach ($this->envs as $env => &$config) {
-            // don’t need to test source if only doing replacements on target
-            if ($env !== 'source' || !$this->getOpt(self::OPT_REPLACEMENTS_ONLY)) {
-                if ($config['file']) {
-                    // check file
-                    if ($env == 'source') {
-                        $this->checkSourceFile($config);
-                    } else {
-                        $this->checkTargetFile($config);
-                    }
+            if ($config['file']) {
+                // check file
+                if ($env == 'source') {
+                    $this->checkSourceFile($config);
                 } else {
-                    // check connection
-                    $result = $this->exec($this->getCmd('test', $config['ssh'], [
-                        'base' => $config['base'],
-                        'user' => $config['user'],
-                        'pass' => $config['pass'],
-                        'host' => $config['host'],
-                        'port' => $config['port'],
-                        'mysql' => $config['mysql'],
-                    ]),                   $output, true);
-                    if ($result !== 0) {
-                        $this->error('Connection error for ' . $config['env'] . ' environment.', $result);
-                    }
-
-                    // check gzip support (for db transfert only ; only if useful)
-                    if (!$this->getOpt(self::OPT_REPLACEMENTS_ONLY) && $gzipUseful && $gzipAvailable) {
-                        $result = $this->exec($this->getCmd('gzip_test', $config['ssh']), $output, true);
-                        if ($result !== 0) {
-                            $gzipAvailable = false;
+                    $this->checkTargetFile($config);
+                }
+            } else {
+                // check sql command
+                if (empty($config['mysql'])) {
+                    $result = 0;
+                    foreach ($this->defaultSql as $sql) {
+                        $result = $this->exec($this->getCmd('sql_test', $config['ssh'], [
+                            'mysql' => $sql
+                        ]));
+                        if ($result === 0) {
+                            $config['mysql'] = $sql;
+                            break;
                         }
+                    }
+                    if ($result !== 0) {
+                        throw new Exception(sprintf(
+                            'No sql command found for env %s in %s',
+                            $env,
+                            implode(', ', $this->defaultSql)
+                        ));
+                    }
+                }
+
+                // check dump command
+                if (empty($config['dump'])) {
+                    $result = null;
+                    foreach ($this->defaultDumps as $dump) {
+                        $result = $this->exec($this->getCmd('dump_test', $config['ssh'], [
+                            'dump' => $dump
+                        ]));
+                        if ($result === 0) {
+                            $config['dump'] = $dump;
+                            break;
+                        }
+                    }
+                    if ($result !== 0) {
+                        throw new Exception(sprintf(
+                            'No dump command found for env %s in %s',
+                            $env,
+                            implode(', ', $this->defaultDumps)
+                        ));
+                    }
+                }
+
+                // check connection
+                $result = $this->exec($this->getCmd('test', $config['ssh'], [
+                    'base' => $config['base'],
+                    'user' => $config['user'],
+                    'pass' => $config['pass'],
+                    'host' => $config['host'],
+                    'port' => $config['port'],
+                    'mysql' => $config['mysql'],
+                ]), $output, true);
+                if ($result !== 0) {
+                    $this->error('Connection error for ' . $config['env'] . ' environment.', $result);
+                }
+
+                // check gzip support (for db transfert only ; only if useful)
+                if (!$this->getOpt(self::OPT_REPLACEMENTS_ONLY) && $gzipUseful && $gzipAvailable) {
+                    $result = $this->exec($this->getCmd('gzip_test', $config['ssh']), $output, true);
+                    if ($result !== 0) {
+                        $gzipAvailable = false;
                     }
                 }
             }
@@ -497,8 +555,6 @@ class App
                 'ssh' => false,
                 'file' => false,
                 'php' => $this->defaultPhp,
-                'mysql' => $this->defaultMysql,
-                'mysqldump' => $this->defaultMysqldump,
                 'protected' => false,
                 'gzip' => false,
             ];
@@ -528,6 +584,16 @@ class App
                 }
             }
         }
+
+        // default table filter
+        if (empty($this->config['tables'])) {
+            $this->config['tables'] = '.*';
+        }
+    }
+
+    private function getDumpCommand($env)
+    {
+        $this->exec($this->getCmd());
     }
 
     private function parseYaml($contents)
@@ -626,7 +692,9 @@ class App
 
     /**
      * @param $format
-     * @param $vars
+     * @param array $vars
+     * @param string $regex
+     * @return array|string|string[]|null
      */
     private function buildCommand($format, $vars = [], $regex = '/{([^{}]*?)}/')
     {
@@ -639,7 +707,7 @@ class App
             } else {
                 return $matches[0];
             }
-        },                           $format);
+        }, $format);
     }
 
     private function escape($value)
@@ -655,7 +723,7 @@ class App
 
     private function getTables()
     {
-        $filter = isset($this->config['tables']) ? $this->config['tables'] : null;
+        $filter = $this->config['tables'];
         $include = $this->getOpt(self::OPT_INCLUDE);
         $exclude = $this->getOpt(self::OPT_EXCLUDE);
 
@@ -671,44 +739,40 @@ class App
                 'host' => $source['host'],
                 'port' => $source['port'],
                 'mysql' => $source['mysql'],
-            ]),         $output, true);
+            ]), $output, true);
             $tables = explode(PHP_EOL, $output);
         }
 
-        if ($filter || $include || $exclude) {
-            // filtering
-            if ($filter) {
-                $tables = array_filter($tables, function ($table) use ($filter) {
-                    return preg_match('/' . addslashes($filter) . '/', $table);
-                });
+        // filtering
+        $tables = array_filter($tables, function ($table) use ($filter) {
+            return preg_match('/' . $filter . '/', $table);
+        });
+
+        $available = "Available tables are:" . PHP_EOL . " - " . implode(PHP_EOL . " - ", $tables);
+
+        if ($include) {
+            if (!is_array($include)) {
+                $include = [$include];
             }
-
-            $available = "Available tables are:" . PHP_EOL . " - " . implode(PHP_EOL . " - ", $tables);
-
-            if ($include) {
-                if (!is_array($include)) {
-                    $include = [$include];
+            // just checking if all included tables exist
+            foreach ($include as $table) {
+                if (array_search($table, $tables) === false) {
+                    $this->error('The included table `' . $table . '` is not found', $available);
                 }
-                // just checking if all included tables exist
-                foreach ($include as $table) {
-                    if (array_search($table, $tables) === false) {
-                        $this->error('The included table `' . $table . '` is not found', $available);
-                    }
-                }
-                $tables = $include;
             }
+            $tables = $include;
+        }
 
-            if ($exclude) {
-                if (!is_array($exclude)) {
-                    $exclude = [$exclude];
-                }
-                foreach ($exclude as $table) {
-                    $offset = array_search($table, $tables);
-                    if ($offset === false) {
-                        $this->error('The excluded table `' . $table . '` is not found', $available);
-                    } else {
-                        unset($tables[$offset]);
-                    }
+        if ($exclude) {
+            if (!is_array($exclude)) {
+                $exclude = [$exclude];
+            }
+            foreach ($exclude as $table) {
+                $offset = array_search($table, $tables);
+                if ($offset === false) {
+                    $this->error('The excluded table `' . $table . '` is not found', $available);
+                } else {
+                    unset($tables[$offset]);
                 }
             }
         }
@@ -794,7 +858,7 @@ class App
                 'base' => $source['base'],
                 'host' => $source['host'],
                 'port' => $source['port'],
-                'mysqldump' => $source['mysqldump'],
+                'dump' => $source['dump'],
                 'options' => $this->getOpt(self::OPT_FIX) ? '--skip-set-charset --default-character-set=latin1' : '',
                 'tables' => $source['tables'],
                 'gzip' => $this->gzip ? ' | gzip -9 ' : '',
@@ -844,13 +908,8 @@ class App
         $this->exec($this->getCmd('cp', $target['ssh'], [
             'data' => $this->getDbrData(),
             'dbr' => $this->dbr,
-            'php' => $this->defaultPhp,
+            'php' => $target['php'],
         ]));
-
-        // chmod +x
-//            $this->exec($this->getCmd('chmod', $target['ssh'], array(
-//                'dbr' => $this->dbr,
-//            )));
 
         $replaceCmd = $this->getCmd('replace', $target['ssh'], [
             'dbr' => $this->dbr,
@@ -872,7 +931,7 @@ class App
             'host' => $target['host'],
             'port' => $target['port'],
             'php' => $target['php'],
-        ]),                   $output);
+        ]), $output);
 
         if ($result !== 0) {
             $this->removeDbr($target);
@@ -897,7 +956,7 @@ class App
             // limit replacement on source table names by default
             $options['tables'] = '--tables "' . implode(',', $source['tables']) . '"';
 
-            foreach ($this->dbrOpts as $short => $long) {
+            foreach ($this->dbrOpts as $long) {
                 $optName = str_replace(':', '', $long);
                 if (array_key_exists($optName, $replacement)) {
                     $options[$optName] = '--' . $optName;
@@ -919,7 +978,7 @@ class App
                 'search' => $replacement[$source['env']],
                 'replace' => $replacement[$target['env']],
                 'options' => implode(' ', $options),
-            ]),                   $output);
+            ]), $output);
 
             if ($result !== 0) {
                 $errors .= $output . PHP_EOL;
@@ -958,6 +1017,7 @@ class App
                 [
                     'ssh' => $ssh,
                     'cmd' => $cmd,
+                    // add docker support: docker exec {container} '{cmd}'
                 ]
             )
             : $cmd;
